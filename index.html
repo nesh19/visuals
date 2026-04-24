@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hiverlab Portfolio | Stress Simulation</title>
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <style>
+        body { margin: 0; background: #0a0a0c; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        canvas { width: 100%; height: 100%; outline: none; }
+        #ui-panel {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background: rgba(15, 15, 20, 0.85); padding: 25px; border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1); color: white; width: 320px;
+            backdrop-filter: blur(10px); text-align: center;
+        }
+        input[type=range] { width: 100%; margin-top: 15px; cursor: pointer; accent-color: #ff4d4d; }
+    </style>
+</head>
+<body>
+    <div id="ui-panel">
+        <strong style="letter-spacing: 2px;">CORTISOL RESPONSE</strong>
+        <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+    </div>
+    <canvas id="renderCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+
+        const createScene = function () {
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0.05, 0.05, 0.07, 1);
+
+            // Camera Setup
+            const camera = new BABYLON.ArcRotateCamera("cam", -Math.PI/2, Math.PI/2.1, 2.5, new BABYLON.Vector3(0, 0.3, 0), scene);
+            camera.attachControl(canvas, true);
+            camera.lowerRadiusLimit = 1.5;
+            camera.upperRadiusLimit = 5;
+
+            // FIX: THE AMYGDALA LIGHT
+            // Using Physical Falloff so 0.1 intensity doesn't blow out the scene
+            const amygdalaLight = new BABYLON.PointLight("amygdalaLight", new BABYLON.Vector3(0, 0.65, 0.05), scene);
+            amygdalaLight.intensity = 0.02; 
+            amygdalaLight.range = 0.4; // Light physically cannot travel further than this
+            amygdalaLight.falloffType = BABYLON.Light.FALLOFF_PHYSICAL; 
+            amygdalaLight.diffuse = new BABYLON.Color3(0.2, 0.5, 1.0); // Start calm blue
+
+            // Environment
+            const env = scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
+
+            // ASSET LOADER
+            BABYLON.SceneLoader.ImportMesh("", "./models/", "human_stress_v01.glb", scene, 
+			    function (meshes, particleSystems, skeletons, animationGroups) {
+                console.log("Model loaded from models folder!"); 
+                
+                // 1. Setup the Glass Torso
+                const body = scene.getMeshByName("mesh_body");
+                const glassMat = new BABYLON.PBRMaterial("glassMat", scene);
+                glassMat.alpha = 0.15;
+                glassMat.transmission = 1.0;
+                glassMat.roughness = 0.05;
+                glassMat.indexOfRefraction = 1.45; // Real glass physics
+                body.material = glassMat;
+
+                // 2. Play all loops (Heart + Lungs)
+                animationGroups.forEach(group => group.play(true));
+
+                // 3. Setup Vagus Nerve Emissive
+                const vagus = scene.getMeshByName("mesh_vagus");
+                const vagusMat = vagus.material; 
+
+                // 4. UI INTERACTION LOGIC
+                const slider = document.getElementById("stressSlider");
+                const heart = scene.getMeshByName("mesh_heart");
+
+                scene.onBeforeRenderObservable.add(() => {
+                    const stressLevel = parseFloat(slider.value);
+
+                    // SYNC VAGUS TO HEART (The "Code Glue")
+                    if(heart.morphTargetManager && vagus.morphTargetManager) {
+                        const heartPulse = heart.morphTargetManager.getTarget(0).influence;
+                        // Slaving the nerve to the heart's current frame
+                        vagus.morphTargetManager.getTarget(0).influence = heartPulse;
+                        vagus.morphTargetManager.getTarget(1).influence = heart.morphTargetManager.getTarget(1).influence;
+                    }
+
+                    // MODULATE LIGHT & NERVE GLOW
+                    const stressColor = BABYLON.Color3.Lerp(
+                        new BABYLON.Color3(0.1, 0.4, 1.0), // Blue
+                        new BABYLON.Color3(1.0, 0.0, 0.0), // Red
+                        stressLevel
+                    );
+
+                    amygdalaLight.diffuse = stressColor;
+                    amygdalaLight.intensity = 0.02 + (stressLevel * 0.8);
+                    
+                    vagusMat.emissiveColor = stressColor;
+                    vagusMat.emissiveIntensity = stressLevel * 4;
+                });
+            });
+
+            return scene;
+        };
+
+        const scene = createScene();
+        engine.runRenderLoop(() => scene.render());
+        window.addEventListener("resize", () => engine.resize());
+    </script>
+</body>
+</html>
