@@ -2,67 +2,153 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Medical Portfolio | Interactive Viewer</title>
-    
+    <title>Technical Artist Portfolio | nesh19</title>
     <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
-    
     <style>
-        body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: sans-serif; color: white; }
-        
-        babylon { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
+        body { 
+            margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
+            background: radial-gradient(circle, #5a5a5c 0%, #050505 100%); 
+        }
+        babylon { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 1; }
         
         #ui-panel { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
-            background: rgba(20, 20, 20, 0.9); padding: 20px; border-radius: 10px; 
-            border: 1px solid #555; width: 300px; text-align: center; z-index: 100;
+            background: rgba(15, 15, 15, 0.85); padding: 20px; border-radius: 10px; 
+            border: 1px solid #444; width: 300px; text-align: center; z-index: 100; backdrop-filter: blur(5px);
         }
         input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; accent-color: #ff4d4d; }
+
+        #stats-panel { 
+            position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.8); 
+            padding: 15px; border-radius: 8px; border-left: 3px solid #00ff00; 
+            font-size: 12px; z-index: 100; pointer-events: none; line-height: 1.5;
+        }
+        .stat-val { color: #00ff00; font-weight: bold; }
+
+        #tex-gallery { 
+            position: absolute; bottom: 20px; right: 20px; display: flex; gap: 8px; 
+            background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; z-index: 100;
+        }
+        .tex-box { 
+            width: 55px; height: 55px; border: 1px solid #555; background-size: cover; 
+            background-position: center; border-radius: 4px; position: relative;
+        }
+        .tex-label {
+            position: absolute; bottom: -15px; left: 0; width: 100%; text-align: center;
+            font-size: 9px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
     </style>
 </head>
 <body>
 
+    <div id="stats-panel">
+        <strong>REAL-TIME METRICS</strong><br>
+        FPS: <span id="fps" class="stat-val">0</span><br>
+        Draw Calls: <span id="drawCalls" class="stat-val">0</span><br>
+        Active Tris: <span id="tris" class="stat-val">0</span><br>
+        Active Verts: <span id="verts" class="stat-val">0</span><br>
+        File Size: <span id="fileSize" class="stat-val">Loading...</span>
+    </div>
+
     <div id="ui-panel">
-        <strong>CORTISOL / STRESS LEVEL</strong>
+        <strong style="letter-spacing: 1px; color:#aaa;">CORTISOL / STRESS</strong>
         <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
     </div>
+
+    <div id="tex-gallery"></div>
 
     <babylon id="myViewer" model="./models/human_stress_v01.glb" extends="minimal"></babylon>
 
     <script>
         BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
             
+            viewer.onSceneInitObservable.add(function(scene) {
+                scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
+            });
+
             viewer.onModelLoadedObservable.add(function(model) {
                 const scene = viewer.sceneManager.scene;
+                const engine = viewer.engine;
                 
+                // 1. ENABLE SCENE INSTRUMENTATION (For real-time Draw Calls)
+                const instrumentation = new BABYLON.SceneInstrumentation(scene);
+                instrumentation.captureDrawCalls = true;
+
+                // 2. AMBIENT OCCLUSION FIX
+                // Loop through all PBR materials and force the AO map to render stronger
+                scene.materials.forEach(mat => {
+                    if (mat instanceof BABYLON.PBRMaterial && mat.ambientTexture) {
+                        mat.ambientTextureStrength = 2.0; // Boosts the AO darkness
+                        mat.useAmbientInGrayScale = true; // Ensures it multiplies correctly over the Albedo
+                    }
+                });
+
                 const heart = scene.getMeshByName("mesh_heart");
                 const vagus = scene.getMeshByName("mesh_vagus");
                 const slider = document.getElementById("stressSlider");
 
-                // Start animations (heart and lungs)
-                scene.animationGroups.forEach(anim => {
-                    anim.play(true); 
+                // Dynamic File Size
+                fetch("./models/human_stress_v01.glb").then(response => {
+                    const size = response.headers.get("content-length");
+                    if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
+                }).catch(() => document.getElementById("fileSize").innerText = "Unknown");
+
+                // Texture Previews
+                const gallery = document.getElementById("tex-gallery");
+                scene.textures.forEach(t => {
+                    if(t.name && !t.name.includes("blob") && !t.name.includes("data:")) {
+                        let box = document.createElement("div");
+                        box.className = "tex-box";
+                        box.style.backgroundImage = `url('${t.url || t.name}')`;
+                        
+                        let label = document.createElement("div");
+                        label.className = "tex-label";
+                        label.innerText = t.name.split('/').pop().substring(0, 8);
+                        
+                        box.appendChild(label);
+                        gallery.appendChild(box);
+                    }
                 });
 
+                scene.animationGroups.forEach(anim => anim.play(true));
+
+                // 3. REAL-TIME RENDER LOOP
                 scene.onBeforeRenderObservable.add(() => {
                     const stressLevel = parseFloat(slider.value);
+                    
+                    // --- LIVE STATS ---
+                    document.getElementById("fps").innerText = engine.getFps().toFixed();
+                    document.getElementById("drawCalls").innerText = instrumentation.drawCallsCounter.current;
+                    
+                    // getActiveIndices calculates only what the camera actually sees!
+                    document.getElementById("tris").innerText = (scene.getActiveIndices() / 3).toLocaleString();
+                    
+                    let activeVerts = 0;
+                    scene.getActiveMeshes().forEach(m => {
+                        if (m.getTotalVertices() > 0) activeVerts += m.getTotalVertices();
+                    });
+                    document.getElementById("verts").innerText = activeVerts.toLocaleString();
 
-                    // 1. Sync Vagus Nerve movement to Heartbeat
-                    if(heart && vagus && heart.morphTargetManager && vagus.morphTargetManager) {
-                        const heartPulse = heart.morphTargetManager.getTarget(0).influence;
-                        vagus.morphTargetManager.getTarget(0).influence = heartPulse;
+                    // --- VAGUS SYNC ---
+                    if(vagus && vagus.morphTargetManager) {
+                        let currentPulse = 0;
+                        if (heart && heart.morphTargetManager && heart.morphTargetManager.getTarget(0)) {
+                            currentPulse = heart.morphTargetManager.getTarget(0).influence;
+                        }
+                        if (currentPulse === 0 || currentPulse === undefined) {
+                            const speed = 1.0 + (stressLevel * 2.5);
+                            currentPulse = (Math.sin(Date.now() * 0.005 * speed) + 1) / 2; 
+                        }
+                        vagus.morphTargetManager.getTarget(0).influence = currentPulse;
                     }
 
-                    // 2. Vagus Color Change (The Bulletproof Math Bypass)
                     if(vagus && vagus.material && vagus.material.emissiveColor) {
-                        // Manually shifting RGB values from Calm Blue to Stress Red
                         vagus.material.emissiveColor.r = 0.1 + (0.9 * stressLevel);
                         vagus.material.emissiveColor.g = 0.4 - (0.4 * stressLevel);
                         vagus.material.emissiveColor.b = 1.0 - (1.0 * stressLevel);
-                        
                         vagus.material.emissiveIntensity = stressLevel * 5; 
                     }
                     
-                    // 3. Animation Speed increases with stress
                     scene.animationGroups.forEach(anim => {
                         anim.speedRatio = 1.0 + (stressLevel * 2.5);
                     });
