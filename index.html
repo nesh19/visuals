@@ -1,4 +1,68 @@
-<script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Technical Artist Portfolio | nesh19</title>
+    
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
+    
+    <style>
+        body { 
+            margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
+            background: radial-gradient(circle, #5a5a5c 0%, #050505 100%); 
+        }
+        babylon { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 1; }
+        
+        #ui-panel { 
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            background: rgba(15, 15, 15, 0.85); padding: 20px; border-radius: 10px; 
+            border: 1px solid #444; width: 300px; text-align: center; z-index: 100; backdrop-filter: blur(5px);
+        }
+        input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; accent-color: #ff4d4d; }
+
+        #stats-panel { 
+            position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.8); 
+            padding: 15px; border-radius: 8px; border-left: 3px solid #00ff00; 
+            font-size: 12px; z-index: 100; pointer-events: none; line-height: 1.5;
+        }
+        .stat-val { color: #00ff00; font-weight: bold; }
+
+        #tex-gallery { 
+            position: absolute; bottom: 20px; right: 20px; display: flex; gap: 8px; 
+            background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; z-index: 100;
+        }
+        .tex-box { 
+            width: 55px; height: 55px; border: 1px solid #555; background-size: cover; 
+            background-position: center; border-radius: 4px; position: relative;
+        }
+        .tex-label {
+            position: absolute; bottom: -15px; left: 0; width: 100%; text-align: center;
+            font-size: 9px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="stats-panel">
+        <strong>STATISTICS</strong><br>
+        FPS: <span id="fps" class="stat-val">0</span><br>
+        Draw Calls: <span id="drawCalls" class="stat-val">0</span><br>
+        Total Tris: <span id="tris" class="stat-val">0</span><br>
+        Total Verts: <span id="verts" class="stat-val">0</span><br>
+        File Size: <span id="fileSize" class="stat-val">Loading...</span>
+    </div>
+
+    <div id="ui-panel">
+        <strong style="letter-spacing: 1px; color:#aaa;">CORTISOL / STRESS</strong>
+        <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+    </div>
+
+    <div id="tex-gallery"></div>
+
+    <babylon id="myViewer" model="./models/human_stress_v01.glb" extends="minimal"></babylon>
+
+    <script>
         BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
             
             viewer.onSceneInitObservable.add(function(scene) {
@@ -9,7 +73,7 @@
                 const scene = viewer.sceneManager.scene;
                 const engine = viewer.engine;
                 
-                // Dim environment, add specific dramatic light
+                // Set the dark mood
                 scene.environmentIntensity = 0.4;
                 const dynamicLight = new BABYLON.PointLight("dynamicLight", new BABYLON.Vector3(0, 0.5, 0.1), scene);
                 dynamicLight.intensity = 0.05; 
@@ -21,13 +85,13 @@
                 const vagus = scene.getMeshByName("mesh_vagus");
                 const slider = document.getElementById("stressSlider");
 
+                // Get File Size
                 fetch("./models/human_stress_v01.glb").then(response => {
                     const size = response.headers.get("content-length");
                     if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
                 }).catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
-                // --- FIX 1: THE POLY COUNT ERROR ---
-                // We safely loop through all meshes to count exactly how heavy the model is
+                // Calculate Exact Polycount safely
                 let totalTris = 0;
                 let totalVerts = 0;
                 scene.meshes.forEach(m => {
@@ -38,26 +102,22 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                // --- FIX 2: THE TEXTURE GALLERY ---
-                // Find the specific material that has "organ" in its name
+                // Extract specific Organ Textures
                 const gallery = document.getElementById("tex-gallery");
                 const organMat = scene.materials.find(m => m.name.toLowerCase().includes("organ"));
                 
                 if (organMat) {
-                    // Extract only the maps actively used by the organs
                     const textures = organMat.getActiveTextures();
                     textures.forEach((t, index) => {
                         let box = document.createElement("div");
                         box.className = "tex-box";
                         
-                        // Use the blob URL directly
                         const texUrl = t.url || t.name;
                         box.style.backgroundImage = `url('${texUrl}')`;
                         
                         let label = document.createElement("div");
                         label.className = "tex-label";
                         
-                        // Clean up the name (if it's a messy embedded blob string, name it Map 1, Map 2, etc.)
                         let tName = t.name.split('/').pop();
                         if (tName.length > 15 || tName.startsWith("data:") || tName.startsWith("blob:")) {
                             tName = "Map " + (index + 1);
@@ -73,22 +133,22 @@
 
                 scene.animationGroups.forEach(anim => anim.play(true));
 
-                // RENDER LOOP
+                // REAL-TIME LOOP
                 scene.onBeforeRenderObservable.add(() => {
                     const stressLevel = parseFloat(slider.value);
                     
                     document.getElementById("fps").innerText = engine.getFps().toFixed();
                     document.getElementById("drawCalls").innerText = instrumentation.drawCallsCounter.current;
                     
-                    // LIGHTING & COLOR LOGIC
-                    const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); // Blue
-                    const peakColor = new BABYLON.Color3(0.5, 0.0, 0.0); // Dark Red
+                    // Stress Lighting Logic
+                    const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
+                    const peakColor = new BABYLON.Color3(0.5, 0.0, 0.0); 
                     const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, stressLevel);
                     
                     dynamicLight.diffuse = currentColor;
                     dynamicLight.intensity = 0.02 + (stressLevel * 0.1);
 
-                    // ANIMATION LOGIC: Force mathematical pulse for Vagus
+                    // Math Pulse Animation
                     const speed = 1.0 + (stressLevel * 2.5);
                     scene.animationGroups.forEach(anim => anim.speedRatio = speed);
 
@@ -97,7 +157,7 @@
                         vagus.morphTargetManager.getTarget(0).influence = mathPulse;
                     }
 
-                    // VAGUS MATERIAL INTENSITY
+                    // Intense Glow
                     if(vagus && vagus.material) {
                         vagus.material.emissiveColor = currentColor;
                         vagus.material.emissiveIntensity = 2.0 + (stressLevel * 10.0);
@@ -106,3 +166,5 @@
             });
         });
     </script>
+</body>
+</html>
