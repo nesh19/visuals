@@ -1,26 +1,51 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Hiverlab Portfolio | Stress Simulation</title>
+    <title>Medical Portfolio | Interactive Visualizer</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <style>
-        body { margin: 0; background: #0a0a0c; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
-        canvas { width: 100%; height: 100%; outline: none; }
-        #ui-panel {
-            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            background: rgba(15, 15, 20, 0.85); padding: 25px; border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1); color: white; width: 320px;
-            backdrop-filter: blur(10px); text-align: center;
-        }
-        input[type=range] { width: 100%; margin-top: 15px; cursor: pointer; accent-color: #ff4d4d; }
+        /* ISSUE 2: Gray to Black Falloff */
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; 
+               background: radial-gradient(circle, #2c2c2e 0%, #000000 100%); }
+        canvas { width: 100%; height: 100%; outline: none; background: transparent; }
+        
+        #ui-overlay { position: absolute; top: 20px; right: 20px; width: 280px; 
+                      background: rgba(15,15,15,0.9); padding: 20px; color: white; 
+                      border-radius: 12px; border: 1px solid #444; backdrop-filter: blur(5px); }
+        
+        /* ISSUE 5: Model Info Panel */
+        #info-panel { position: absolute; bottom: 20px; left: 20px; 
+                      background: rgba(0,0,0,0.7); padding: 15px; color: #aaa; 
+                      font-size: 11px; border-left: 3px solid #ff4d4d; }
+        
+        .control-group { margin-bottom: 15px; }
+        input[type=range] { width: 100%; accent-color: #ff4d4d; cursor: pointer; }
+        button { width: 100%; padding: 8px; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <div id="ui-panel">
-        <strong style="letter-spacing: 2px;">CORTISOL RESPONSE</strong>
-        <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+
+    <div id="info-panel">
+        <strong>MODEL SPECS:</strong><br>
+        • Poly Count: ~45k Triangles<br>
+        • Maps: 2k PBR (Albedo, Rough, Normal, Emissive)<br>
+        • Tech: glTF 2.0 / Draco Compression<br>
+        • Extensions: KHR_materials_transmission
     </div>
+
+    <div id="ui-overlay">
+        <div class="control-group">
+            <strong>CORTISOL LEVEL (STRESS)</strong>
+            <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+        </div>
+
+        <div class="control-group">
+            <strong>LIGHTING MODE</strong>
+            <button id="lightToggle">Switch to Studio Light</button>
+        </div>
+    </div>
+
     <canvas id="renderCanvas"></canvas>
 
     <script>
@@ -29,74 +54,84 @@
 
         const createScene = function () {
             const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0.05, 0.05, 0.07, 1);
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent so CSS gradient shows
 
-            // Camera Setup
-            const camera = new BABYLON.ArcRotateCamera("cam", -Math.PI/2, Math.PI/2.1, 2.5, new BABYLON.Vector3(0, 0.3, 0), scene);
+            // ISSUE 8: Camera Closeness
+            const camera = new BABYLON.ArcRotateCamera("cam", -Math.PI/2, Math.PI/2.2, 2.0, new BABYLON.Vector3(0, 0.4, 0), scene);
             camera.attachControl(canvas, true);
-            camera.lowerRadiusLimit = 1.5;
-            camera.upperRadiusLimit = 5;
+            camera.lowerRadiusLimit = 0.3; // Can almost touch the mesh
+            camera.upperRadiusLimit = 5.0;
+            camera.wheelPrecision = 100; // Smoother zoom
 
-            // FIX: THE AMYGDALA LIGHT
-            // Using Physical Falloff so 0.1 intensity doesn't blow out the scene
+            // ISSUE 7: Fixed Punctual Light
             const amygdalaLight = new BABYLON.PointLight("amygdalaLight", new BABYLON.Vector3(0, 0.65, 0.05), scene);
-            amygdalaLight.intensity = 0.02; 
-            amygdalaLight.range = 0.4; // Light physically cannot travel further than this
+            amygdalaLight.intensity = 0.01;
+            amygdalaLight.range = 0.3; 
             amygdalaLight.falloffType = BABYLON.Light.FALLOFF_PHYSICAL; 
-            amygdalaLight.diffuse = new BABYLON.Color3(0.2, 0.5, 1.0); // Start calm blue
 
-            // Environment
+            // Default Scene Lighting
             const env = scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
+            env.setMainColor(BABYLON.Color3.FromHexString("#111111"));
 
-            // ASSET LOADER
-            BABYLON.SceneLoader.ImportMesh("", "./models/", "human_stress_v01.glb", scene, 
-			    function (meshes, particleSystems, skeletons, animationGroups) {
-                console.log("Model loaded from models folder!"); 
+            BABYLON.SceneLoader.ImportMesh("", "./models/", "human_stress_v01.glb", scene, function (meshes, ps, sk, animGroups) {
                 
-                // 1. Setup the Glass Torso
+                // ISSUE 1: Less Glossy Body
                 const body = scene.getMeshByName("mesh_body");
-                const glassMat = new BABYLON.PBRMaterial("glassMat", scene);
-                glassMat.alpha = 0.15;
-                glassMat.transmission = 1.0;
-                glassMat.roughness = 0.05;
-                glassMat.indexOfRefraction = 1.45; // Real glass physics
-                body.material = glassMat;
+                if(body) {
+                    const glass = new BABYLON.PBRMaterial("glassMat", scene);
+                    glass.alpha = 0.1;
+                    glass.roughness = 0.6; // Higher number = LESS glossy/more matte
+                    glass.transmission = 1.0;
+                    glass.indexOfRefraction = 1.1; 
+                    body.material = glass;
+                }
 
-                // 2. Play all loops (Heart + Lungs)
-                animationGroups.forEach(group => group.play(true));
-
-                // 3. Setup Vagus Nerve Emissive
-                const vagus = scene.getMeshByName("mesh_vagus");
-                const vagusMat = vagus.material; 
-
-                // 4. UI INTERACTION LOGIC
-                const slider = document.getElementById("stressSlider");
                 const heart = scene.getMeshByName("mesh_heart");
+                const vagus = scene.getMeshByName("mesh_vagus");
+                const slider = document.getElementById("stressSlider");
 
                 scene.onBeforeRenderObservable.add(() => {
-                    const stressLevel = parseFloat(slider.value);
+                    const val = parseFloat(slider.value);
 
-                    // SYNC VAGUS TO HEART (The "Code Glue")
-                    if(heart.morphTargetManager && vagus.morphTargetManager) {
-                        const heartPulse = heart.morphTargetManager.getTarget(0).influence;
-                        // Slaving the nerve to the heart's current frame
-                        vagus.morphTargetManager.getTarget(0).influence = heartPulse;
-                        vagus.morphTargetManager.getTarget(1).influence = heart.morphTargetManager.getTarget(1).influence;
-                    }
+                    // ISSUE 4: Animation Speed & Color
+                    animGroups.forEach(group => {
+                        group.speedRatio = 1.0 + (val * 2.5); // Fastens up the heart/lungs
+                    });
 
-                    // MODULATE LIGHT & NERVE GLOW
-                    const stressColor = BABYLON.Color3.Lerp(
-                        new BABYLON.Color3(0.1, 0.4, 1.0), // Blue
-                        new BABYLON.Color3(1.0, 0.0, 0.0), // Red
-                        stressLevel
+                    // ISSUE 7: Color Change Logic
+                    amygdalaLight.diffuse = BABYLON.Color3.Lerp(
+                        new BABYLON.Color3(0.1, 0.3, 1.0), // Calm Blue
+                        new BABYLON.Color3(1.0, 0.1, 0.1), // Stress Red
+                        val
                     );
+                    amygdalaLight.intensity = 0.01 + (val * 0.5);
 
-                    amygdalaLight.diffuse = stressColor;
-                    amygdalaLight.intensity = 0.02 + (stressLevel * 0.8);
-                    
-                    vagusMat.emissiveColor = stressColor;
-                    vagusMat.emissiveIntensity = stressLevel * 4;
+                    // ISSUE 3: Vagus Movement Sync (The Fix)
+                    if(heart && vagus && heart.morphTargetManager && vagus.morphTargetManager) {
+                        // We use the influence of the heartbeat to drive the nerve
+                        const heartPulse = heart.morphTargetManager.getTarget(0).influence;
+                        vagus.morphTargetManager.getTarget(0).influence = heartPulse;
+                        
+                        // Apply color to the nerve mesh too
+                        if(vagus.material) {
+                            vagus.material.emissiveColor = amygdalaLight.diffuse;
+                            vagus.material.emissiveIntensity = val * 5;
+                        }
+                    }
                 });
+
+                // ISSUE 6: Light Toggle Logic
+                let studioMode = false;
+                document.getElementById("lightToggle").onclick = () => {
+                    studioMode = !studioMode;
+                    if(studioMode) {
+                        scene.lights.forEach(l => l.intensity *= 5);
+                        document.getElementById("lightToggle").innerText = "Switch to Default Light";
+                    } else {
+                        scene.lights.forEach(l => l.intensity /= 5);
+                        document.getElementById("lightToggle").innerText = "Switch to Studio Light";
+                    }
+                };
             });
 
             return scene;
