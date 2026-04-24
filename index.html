@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title>Technical Artist Portfolio | nesh19</title>
+    
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    
     <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
+    
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
@@ -70,16 +74,15 @@
                 const scene = viewer.sceneManager.scene;
                 const engine = viewer.engine;
                 
-                // 1. ENABLE SCENE INSTRUMENTATION (For real-time Draw Calls)
+                // ENABLE SCENE INSTRUMENTATION
                 const instrumentation = new BABYLON.SceneInstrumentation(scene);
                 instrumentation.captureDrawCalls = true;
 
-                // 2. AMBIENT OCCLUSION FIX
-                // Loop through all PBR materials and force the AO map to render stronger
+                // AMBIENT OCCLUSION FIX
                 scene.materials.forEach(mat => {
                     if (mat instanceof BABYLON.PBRMaterial && mat.ambientTexture) {
-                        mat.ambientTextureStrength = 2.0; // Boosts the AO darkness
-                        mat.useAmbientInGrayScale = true; // Ensures it multiplies correctly over the Albedo
+                        mat.ambientTextureStrength = 2.0; 
+                        mat.useAmbientInGrayScale = true; 
                     }
                 });
 
@@ -87,13 +90,11 @@
                 const vagus = scene.getMeshByName("mesh_vagus");
                 const slider = document.getElementById("stressSlider");
 
-                // Dynamic File Size
                 fetch("./models/human_stress_v01.glb").then(response => {
                     const size = response.headers.get("content-length");
                     if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
                 }).catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
-                // Texture Previews
                 const gallery = document.getElementById("tex-gallery");
                 scene.textures.forEach(t => {
                     if(t.name && !t.name.includes("blob") && !t.name.includes("data:")) {
@@ -112,15 +113,12 @@
 
                 scene.animationGroups.forEach(anim => anim.play(true));
 
-                // 3. REAL-TIME RENDER LOOP
+                // REAL-TIME RENDER LOOP
                 scene.onBeforeRenderObservable.add(() => {
                     const stressLevel = parseFloat(slider.value);
                     
-                    // --- LIVE STATS ---
                     document.getElementById("fps").innerText = engine.getFps().toFixed();
                     document.getElementById("drawCalls").innerText = instrumentation.drawCallsCounter.current;
-                    
-                    // getActiveIndices calculates only what the camera actually sees!
                     document.getElementById("tris").innerText = (scene.getActiveIndices() / 3).toLocaleString();
                     
                     let activeVerts = 0;
@@ -129,7 +127,7 @@
                     });
                     document.getElementById("verts").innerText = activeVerts.toLocaleString();
 
-                    // --- VAGUS SYNC ---
+                    // VAGUS SYNC
                     if(vagus && vagus.morphTargetManager) {
                         let currentPulse = 0;
                         if (heart && heart.morphTargetManager && heart.morphTargetManager.getTarget(0)) {
