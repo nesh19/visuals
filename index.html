@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>Technical Artist Portfolio | nesh19</title>
-    
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    
     <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
-    
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
@@ -46,11 +43,11 @@
 <body>
 
     <div id="stats-panel">
-        <strong>REAL-TIME METRICS</strong><br>
+        <strong>STATISTICS</strong><br>
         FPS: <span id="fps" class="stat-val">0</span><br>
         Draw Calls: <span id="drawCalls" class="stat-val">0</span><br>
-        Active Tris: <span id="tris" class="stat-val">0</span><br>
-        Active Verts: <span id="verts" class="stat-val">0</span><br>
+        Total Tris: <span id="tris" class="stat-val">0</span><br>
+        Total Verts: <span id="verts" class="stat-val">0</span><br>
         File Size: <span id="fileSize" class="stat-val">Loading...</span>
     </div>
 
@@ -74,17 +71,15 @@
                 const scene = viewer.sceneManager.scene;
                 const engine = viewer.engine;
                 
-                // ENABLE SCENE INSTRUMENTATION
+                // Dim the global environment light so our custom light pops more
+                scene.environmentIntensity = 0.4;
+                
+                // Add the custom light back in, specifically over the brain/heart
+                const dynamicLight = new BABYLON.PointLight("dynamicLight", new BABYLON.Vector3(0, 0.5, 0.1), scene);
+                dynamicLight.intensity = 0.05; 
+                
                 const instrumentation = new BABYLON.SceneInstrumentation(scene);
                 instrumentation.captureDrawCalls = true;
-
-                // AMBIENT OCCLUSION FIX
-                scene.materials.forEach(mat => {
-                    if (mat instanceof BABYLON.PBRMaterial && mat.ambientTexture) {
-                        mat.ambientTextureStrength = 2.0; 
-                        mat.useAmbientInGrayScale = true; 
-                    }
-                });
 
                 const heart = scene.getMeshByName("mesh_heart");
                 const vagus = scene.getMeshByName("mesh_vagus");
@@ -95,9 +90,15 @@
                     if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
                 }).catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
+                // Get Total Geometry (Fixes the 0 Tris issue)
+                document.getElementById("tris").innerText = Math.round(scene.getTotalIndices() / 3).toLocaleString();
+                document.getElementById("verts").innerText = scene.getTotalVertices().toLocaleString();
+
+                // EXACT TEXTURE FILTER: Only grab textures from mat_organs
                 const gallery = document.getElementById("tex-gallery");
                 scene.textures.forEach(t => {
-                    if(t.name && !t.name.includes("blob") && !t.name.includes("data:")) {
+                    // Check if the texture belongs to the organs material OR has organ in the name
+                    if(t.name && t.name.toLowerCase().includes("organ") && !t.name.includes("blob") && !t.name.includes("data:")) {
                         let box = document.createElement("div");
                         box.className = "tex-box";
                         box.style.backgroundImage = `url('${t.url || t.name}')`;
@@ -113,43 +114,36 @@
 
                 scene.animationGroups.forEach(anim => anim.play(true));
 
-                // REAL-TIME RENDER LOOP
+                // RENDER LOOP
                 scene.onBeforeRenderObservable.add(() => {
                     const stressLevel = parseFloat(slider.value);
                     
                     document.getElementById("fps").innerText = engine.getFps().toFixed();
                     document.getElementById("drawCalls").innerText = instrumentation.drawCallsCounter.current;
-                    document.getElementById("tris").innerText = (scene.getActiveIndices() / 3).toLocaleString();
                     
-                    let activeVerts = 0;
-                    scene.getActiveMeshes().forEach(m => {
-                        if (m.getTotalVertices() > 0) activeVerts += m.getTotalVertices();
-                    });
-                    document.getElementById("verts").innerText = activeVerts.toLocaleString();
+                    // LIGHTING & COLOR LOGIC
+                    const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); // Blue
+                    const peakColor = new BABYLON.Color3(0.5, 0.0, 0.0); // Dark Red
+                    const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, stressLevel);
+                    
+                    dynamicLight.diffuse = currentColor;
+                    dynamicLight.intensity = 0.02 + (stressLevel * 0.1); // Keep it subtle
 
-                    // VAGUS SYNC
-                    if(vagus && vagus.morphTargetManager) {
-                        let currentPulse = 0;
-                        if (heart && heart.morphTargetManager && heart.morphTargetManager.getTarget(0)) {
-                            currentPulse = heart.morphTargetManager.getTarget(0).influence;
-                        }
-                        if (currentPulse === 0 || currentPulse === undefined) {
-                            const speed = 1.0 + (stressLevel * 2.5);
-                            currentPulse = (Math.sin(Date.now() * 0.005 * speed) + 1) / 2; 
-                        }
-                        vagus.morphTargetManager.getTarget(0).influence = currentPulse;
+                    // ANIMATION LOGIC: Force mathematical pulse for Vagus
+                    const speed = 1.0 + (stressLevel * 2.5);
+                    scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+
+                    if(vagus && vagus.morphTargetManager && vagus.morphTargetManager.getTarget(0)) {
+                        // Math.sin creates a perfect breathing wave between 0 and 1
+                        const mathPulse = (Math.sin(Date.now() * 0.005 * speed) + 1) / 2;
+                        vagus.morphTargetManager.getTarget(0).influence = mathPulse;
                     }
 
-                    if(vagus && vagus.material && vagus.material.emissiveColor) {
-                        vagus.material.emissiveColor.r = 0.1 + (0.9 * stressLevel);
-                        vagus.material.emissiveColor.g = 0.4 - (0.4 * stressLevel);
-                        vagus.material.emissiveColor.b = 1.0 - (1.0 * stressLevel);
-                        vagus.material.emissiveIntensity = stressLevel * 5; 
+                    // VAGUS MATERIAL INTENSITY
+                    if(vagus && vagus.material) {
+                        vagus.material.emissiveColor = currentColor;
+                        vagus.material.emissiveIntensity = 2.0 + (stressLevel * 10.0); // High intensity red
                     }
-                    
-                    scene.animationGroups.forEach(anim => {
-                        anim.speedRatio = 1.0 + (stressLevel * 2.5);
-                    });
                 });
             });
         });
