@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <title>Medical Portfolio | Interactive Viewer</title>
     
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    
     <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
     
     <style>
@@ -40,6 +38,7 @@
                 const vagus = scene.getMeshByName("mesh_vagus");
                 const slider = document.getElementById("stressSlider");
 
+                // Start animations (heart and lungs)
                 scene.animationGroups.forEach(anim => {
                     anim.play(true); 
                 });
@@ -47,24 +46,23 @@
                 scene.onBeforeRenderObservable.add(() => {
                     const stressLevel = parseFloat(slider.value);
 
-                    // Sync Vagus to Heart
+                    // 1. Sync Vagus Nerve movement to Heartbeat
                     if(heart && vagus && heart.morphTargetManager && vagus.morphTargetManager) {
                         const heartPulse = heart.morphTargetManager.getTarget(0).influence;
                         vagus.morphTargetManager.getTarget(0).influence = heartPulse;
                     }
 
-                    // Vagus Color Change
-                    if(vagus && vagus.material) {
-                        const targetColor = BABYLON.Color3.Lerp(
-                            new BABYLON.Color3(0.1, 0.4, 1.0), 
-                            new BABYLON.Color3(1.0, 0.0, 0.0), 
-                            stressLevel
-                        );
-                        vagus.material.emissiveColor = targetColor;
+                    // 2. Vagus Color Change (The Bulletproof Math Bypass)
+                    if(vagus && vagus.material && vagus.material.emissiveColor) {
+                        // Manually shifting RGB values from Calm Blue to Stress Red
+                        vagus.material.emissiveColor.r = 0.1 + (0.9 * stressLevel);
+                        vagus.material.emissiveColor.g = 0.4 - (0.4 * stressLevel);
+                        vagus.material.emissiveColor.b = 1.0 - (1.0 * stressLevel);
+                        
                         vagus.material.emissiveIntensity = stressLevel * 5; 
                     }
                     
-                    // Animation Speed Change
+                    // 3. Animation Speed increases with stress
                     scene.animationGroups.forEach(anim => {
                         anim.speedRatio = 1.0 + (stressLevel * 2.5);
                     });
