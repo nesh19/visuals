@@ -3,11 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <title>Medical Portfolio | Interactive Viewer</title>
+    
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    
     <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
+    
     <style>
         body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: sans-serif; color: white; }
         
-        /* Force the viewer to fit exactly inside the window */
         babylon { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
         
         #ui-panel { 
@@ -37,7 +40,6 @@
                 const vagus = scene.getMeshByName("mesh_vagus");
                 const slider = document.getElementById("stressSlider");
 
-                // Start animations
                 scene.animationGroups.forEach(anim => {
                     anim.play(true); 
                 });
@@ -45,13 +47,13 @@
                 scene.onBeforeRenderObservable.add(() => {
                     const stressLevel = parseFloat(slider.value);
 
-                    // 1. Sync Vagus to Heart
+                    // Sync Vagus to Heart
                     if(heart && vagus && heart.morphTargetManager && vagus.morphTargetManager) {
                         const heartPulse = heart.morphTargetManager.getTarget(0).influence;
                         vagus.morphTargetManager.getTarget(0).influence = heartPulse;
                     }
 
-                    // 2. Vagus Color Change
+                    // Vagus Color Change
                     if(vagus && vagus.material) {
                         const targetColor = BABYLON.Color3.Lerp(
                             new BABYLON.Color3(0.1, 0.4, 1.0), 
@@ -62,7 +64,7 @@
                         vagus.material.emissiveIntensity = stressLevel * 5; 
                     }
                     
-                    // 3. Animation Speed Change
+                    // Animation Speed Change
                     scene.animationGroups.forEach(anim => {
                         anim.speedRatio = 1.0 + (stressLevel * 2.5);
                     });
