@@ -1,128 +1,84 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Technical Artist Portfolio | nesh19</title>
-    <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <meta charset="UTF-8">
+    <title>Medical Portfolio | Babylon Viewer</title>
+    <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; font-family: 'Consolas', monospace; background: #000; }
-        canvas { width: 100%; height: 100%; outline: none; }
+        body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; color: white; }
         
-        /* Stats Panel */
-        #stats-panel { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); 
-                        padding: 15px; color: #00ff00; font-size: 12px; border: 1px solid #333; pointer-events: none; }
+        /* Make the viewer take up the whole screen */
+        babylon { width: 100vw; height: 100vh; display: block; }
         
-        /* Texture Preview Windows */
-        #texture-gallery { position: absolute; bottom: 10px; right: 10px; display: flex; gap: 10px; 
-                           background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; }
-        .texture-thumb { width: 60px; height: 60px; border: 1px solid #555; background-size: cover; border-radius: 4px; }
-        .texture-label { font-size: 8px; color: white; text-align: center; margin-top: 2px; }
-
-        #ui-overlay { position: absolute; top: 10px; right: 10px; width: 220px; 
-                      background: rgba(20,20,20,0.9); padding: 15px; color: white; border-radius: 8px; }
-        button, input { width: 100%; margin-top: 10px; cursor: pointer; }
+        /* The UI Panel for your Slider */
+        #ui-panel { 
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            background: rgba(20, 20, 20, 0.9); padding: 20px; border-radius: 10px; 
+            border: 1px solid #555; width: 300px; text-align: center; z-index: 100;
+        }
+        input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; accent-color: #ff4d4d; }
     </style>
 </head>
 <body>
 
-    <div id="stats-panel">
-        <strong>ENGINE STATS:</strong><br>
-        FPS: <span id="fps">0</span><br>
-        Verts: <span id="verts">0</span><br>
-        Tris: <span id="tris">0</span><br>
-        Meshes: <span id="meshes">0</span>
-    </div>
-
-    <div id="texture-gallery" id="texContainer">
-        </div>
-
-    <div id="ui-overlay">
-        <label style="font-size: 10px;">CORTISOL / STRESS</label>
+    <div id="ui-panel">
+        <strong>STRESS LEVEL</strong>
         <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
-        <button id="wireframeBtn">Toggle Wireframe</button>
-        <button id="lightBtn">Studio Light: OFF</button>
     </div>
 
-    <canvas id="renderCanvas"></canvas>
+    <babylon id="myViewer" model="./models/human_stress_v01.glb"></babylon>
 
     <script>
-        const canvas = document.getElementById("renderCanvas");
-        const engine = new BABYLON.Engine(canvas, true);
-
-        const createScene = function () {
-            const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0.05, 0.05, 0.05, 1);
-
-            // Camera fix: Start at PI/2 to face the front
-            const camera = new BABYLON.ArcRotateCamera("cam", Math.PI/2, Math.PI/2.2, 2.5, new BABYLON.Vector3(0, 0.4, 0), scene);
-            camera.attachControl(canvas, true);
-            camera.lowerRadiusLimit = 0.5;
-
-            const brainLight = new BABYLON.PointLight("brainLight", new BABYLON.Vector3(0, 0.65, 0.05), scene);
-            brainLight.intensity = 0.01;
-            brainLight.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
-
-            const env = scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
-            scene.environmentIntensity = 0.4;
-
-            BABYLON.SceneLoader.ImportMesh("", "./models/", "human_stress_v01.glb", scene, function (meshes, ps, sk, animGroups) {
+        // Wait for the Viewer to initialize
+        BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
+            
+            // Wait for your 3D model to fully load inside the viewer
+            viewer.onModelLoadedObservable.add(function(model) {
                 
-                // 180 Degree Rotation Fix
-                if(meshes[0]) meshes[0].rotation = new BABYLON.Vector3(0, Math.PI, 0);
-
-                // Update Stats Panel
-                document.getElementById("verts").innerText = scene.getTotalVertices().toLocaleString();
-                document.getElementById("tris").innerText = (scene.getTotalIndices() / 3).toLocaleString();
-                document.getElementById("meshes").innerText = scene.meshes.length;
-
-                // ISSUE 5: Texture Preview Logic
-                const gallery = document.getElementById("texture-gallery");
-                scene.textures.forEach(tex => {
-                    if (tex.name && tex.name.includes("blob")) return; // skip internal blobs
-                    let div = document.createElement("div");
-                    div.innerHTML = `<div class="texture-thumb" style="background-image: url('${tex.url}')"></div>
-                                     <div class="texture-label">${tex.name.substring(0,8)}...</div>`;
-                    gallery.appendChild(div);
-                });
-
-                // Interaction Logic
+                // Get the scene so we can control the meshes and animations
+                const scene = viewer.sceneManager.scene;
+                
+                // Find the meshes we need to control
+                const heart = scene.getMeshByName("mesh_heart");
+                const vagus = scene.getMeshByName("mesh_vagus");
                 const slider = document.getElementById("stressSlider");
-                scene.onBeforeRenderObservable.add(() => {
-                    const val = parseFloat(slider.value);
-                    document.getElementById("fps").innerText = engine.getFps().toFixed();
-                    
-                    animGroups.forEach(g => g.speedRatio = 1 + (val * 3));
-                    
-                    brainLight.diffuse = BABYLON.Color3.Lerp(new BABYLON.Color3(0,0,1), new BABYLON.Color3(1,0,0), val);
-                    brainLight.intensity = 0.01 + (val * 0.5);
 
-                    // Vagus Sync
-                    const heart = scene.getMeshByName("mesh_heart");
-                    const vagus = scene.getMeshByName("mesh_vagus");
-                    if(heart && vagus && heart.morphTargetManager) {
-                        vagus.morphTargetManager.getTarget(0).influence = heart.morphTargetManager.getTarget(0).influence;
-                    }
+                // 2. Animation of the lungs and heart to run at the same time
+                // The viewer usually auto-plays everything, but this ensures they loop together
+                scene.animationGroups.forEach(anim => {
+                    anim.play(true); 
                 });
 
-                // Wireframe & Light Toggles
-                document.getElementById("wireframeBtn").onclick = () => {
-                    meshes.forEach(m => { if(m.material) m.material.wireframe = !m.material.wireframe; });
-                };
-                
-                let studio = false;
-                document.getElementById("lightBtn").onclick = () => {
-                    studio = !studio;
-                    scene.environmentIntensity = studio ? 2.5 : 0.4;
-                    document.getElementById("lightBtn").innerText = studio ? "Studio Light: ON" : "Studio Light: OFF";
-                };
+                // Set up the custom logic that runs every single frame
+                scene.onBeforeRenderObservable.add(() => {
+                    const stressLevel = parseFloat(slider.value);
+
+                    // 1. Vagus attached to heart (Syncing Morph Targets)
+                    if(heart && vagus && heart.morphTargetManager && vagus.morphTargetManager) {
+                        const heartPulse = heart.morphTargetManager.getTarget(0).influence;
+                        vagus.morphTargetManager.getTarget(0).influence = heartPulse;
+                    }
+
+                    // 4. Vagus color change due to stress level slider
+                    if(vagus && vagus.material) {
+                        // Blend from calm blue to stress red
+                        const targetColor = BABYLON.Color3.Lerp(
+                            new BABYLON.Color3(0.1, 0.4, 1.0), // Calm
+                            new BABYLON.Color3(1.0, 0.0, 0.0), // Stressed
+                            stressLevel
+                        );
+                        
+                        vagus.material.emissiveColor = targetColor;
+                        vagus.material.emissiveIntensity = stressLevel * 5; // Glows brighter when stressed
+                    }
+                    
+                    // Optional: Speed up the lungs/heart animation based on stress
+                    scene.animationGroups.forEach(anim => {
+                        anim.speedRatio = 1.0 + (stressLevel * 2.5);
+                    });
+                });
             });
-
-            return scene;
-        };
-
-        const scene = createScene();
-        engine.runRenderLoop(() => scene.render());
-        window.addEventListener("resize", () => engine.resize());
+        });
     </script>
 </body>
 </html>
