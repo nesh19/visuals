@@ -2,15 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Medical Portfolio | Babylon Viewer</title>
+    <title>Medical Portfolio | Interactive Viewer</title>
     <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
     <style>
-        body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; color: white; }
+        body { margin: 0; padding: 0; background: #111; overflow: hidden; font-family: sans-serif; color: white; }
         
-        /* Make the viewer take up the whole screen */
-        babylon { width: 100vw; height: 100vh; display: block; }
+        /* Force the viewer to fit exactly inside the window */
+        babylon { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; }
         
-        /* The UI Panel for your Slider */
         #ui-panel { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
             background: rgba(20, 20, 20, 0.9); padding: 20px; border-radius: 10px; 
@@ -22,57 +21,48 @@
 <body>
 
     <div id="ui-panel">
-        <strong>STRESS LEVEL</strong>
+        <strong>CORTISOL / STRESS LEVEL</strong>
         <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
     </div>
 
-    <babylon id="myViewer" model="./models/human_stress_v01.glb"></babylon>
+    <babylon id="myViewer" model="./models/human_stress_v01.glb" extends="minimal"></babylon>
 
     <script>
-        // Wait for the Viewer to initialize
         BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
             
-            // Wait for your 3D model to fully load inside the viewer
             viewer.onModelLoadedObservable.add(function(model) {
-                
-                // Get the scene so we can control the meshes and animations
                 const scene = viewer.sceneManager.scene;
                 
-                // Find the meshes we need to control
                 const heart = scene.getMeshByName("mesh_heart");
                 const vagus = scene.getMeshByName("mesh_vagus");
                 const slider = document.getElementById("stressSlider");
 
-                // 2. Animation of the lungs and heart to run at the same time
-                // The viewer usually auto-plays everything, but this ensures they loop together
+                // Start animations
                 scene.animationGroups.forEach(anim => {
                     anim.play(true); 
                 });
 
-                // Set up the custom logic that runs every single frame
                 scene.onBeforeRenderObservable.add(() => {
                     const stressLevel = parseFloat(slider.value);
 
-                    // 1. Vagus attached to heart (Syncing Morph Targets)
+                    // 1. Sync Vagus to Heart
                     if(heart && vagus && heart.morphTargetManager && vagus.morphTargetManager) {
                         const heartPulse = heart.morphTargetManager.getTarget(0).influence;
                         vagus.morphTargetManager.getTarget(0).influence = heartPulse;
                     }
 
-                    // 4. Vagus color change due to stress level slider
+                    // 2. Vagus Color Change
                     if(vagus && vagus.material) {
-                        // Blend from calm blue to stress red
                         const targetColor = BABYLON.Color3.Lerp(
-                            new BABYLON.Color3(0.1, 0.4, 1.0), // Calm
-                            new BABYLON.Color3(1.0, 0.0, 0.0), // Stressed
+                            new BABYLON.Color3(0.1, 0.4, 1.0), 
+                            new BABYLON.Color3(1.0, 0.0, 0.0), 
                             stressLevel
                         );
-                        
                         vagus.material.emissiveColor = targetColor;
-                        vagus.material.emissiveIntensity = stressLevel * 5; // Glows brighter when stressed
+                        vagus.material.emissiveIntensity = stressLevel * 5; 
                     }
                     
-                    // Optional: Speed up the lungs/heart animation based on stress
+                    // 3. Animation Speed Change
                     scene.animationGroups.forEach(anim => {
                         anim.speedRatio = 1.0 + (stressLevel * 2.5);
                     });
