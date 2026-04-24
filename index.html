@@ -1,49 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Medical Portfolio | Interactive Visualizer</title>
+    <title>Technical Artist Portfolio | nesh19</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <style>
-        /* ISSUE 2: Gray to Black Falloff */
-        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; 
-               background: radial-gradient(circle, #2c2c2e 0%, #000000 100%); }
-        canvas { width: 100%; height: 100%; outline: none; background: transparent; }
+        body { margin: 0; overflow: hidden; font-family: 'Consolas', monospace; background: #000; }
+        canvas { width: 100%; height: 100%; outline: none; }
         
-        #ui-overlay { position: absolute; top: 20px; right: 20px; width: 280px; 
-                      background: rgba(15,15,15,0.9); padding: 20px; color: white; 
-                      border-radius: 12px; border: 1px solid #444; backdrop-filter: blur(5px); }
+        /* Stats Panel */
+        #stats-panel { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); 
+                        padding: 15px; color: #00ff00; font-size: 12px; border: 1px solid #333; pointer-events: none; }
         
-        /* ISSUE 5: Model Info Panel */
-        #info-panel { position: absolute; bottom: 20px; left: 20px; 
-                      background: rgba(0,0,0,0.7); padding: 15px; color: #aaa; 
-                      font-size: 11px; border-left: 3px solid #ff4d4d; }
-        
-        .control-group { margin-bottom: 15px; }
-        input[type=range] { width: 100%; accent-color: #ff4d4d; cursor: pointer; }
-        button { width: 100%; padding: 8px; cursor: pointer; background: #333; color: white; border: none; border-radius: 4px; }
+        /* Texture Preview Windows */
+        #texture-gallery { position: absolute; bottom: 10px; right: 10px; display: flex; gap: 10px; 
+                           background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; }
+        .texture-thumb { width: 60px; height: 60px; border: 1px solid #555; background-size: cover; border-radius: 4px; }
+        .texture-label { font-size: 8px; color: white; text-align: center; margin-top: 2px; }
+
+        #ui-overlay { position: absolute; top: 10px; right: 10px; width: 220px; 
+                      background: rgba(20,20,20,0.9); padding: 15px; color: white; border-radius: 8px; }
+        button, input { width: 100%; margin-top: 10px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="info-panel">
-        <strong>MODEL SPECS:</strong><br>
-        • Poly Count: ~45k Triangles<br>
-        • Maps: 2k PBR (Albedo, Rough, Normal, Emissive)<br>
-        • Tech: glTF 2.0 / Draco Compression<br>
-        • Extensions: KHR_materials_transmission
+    <div id="stats-panel">
+        <strong>ENGINE STATS:</strong><br>
+        FPS: <span id="fps">0</span><br>
+        Verts: <span id="verts">0</span><br>
+        Tris: <span id="tris">0</span><br>
+        Meshes: <span id="meshes">0</span>
     </div>
 
-    <div id="ui-overlay">
-        <div class="control-group">
-            <strong>CORTISOL LEVEL (STRESS)</strong>
-            <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+    <div id="texture-gallery" id="texContainer">
         </div>
 
-        <div class="control-group">
-            <strong>LIGHTING MODE</strong>
-            <button id="lightToggle">Switch to Studio Light</button>
-        </div>
+    <div id="ui-overlay">
+        <label style="font-size: 10px;">CORTISOL / STRESS</label>
+        <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+        <button id="wireframeBtn">Toggle Wireframe</button>
+        <button id="lightBtn">Studio Light: OFF</button>
     </div>
 
     <canvas id="renderCanvas"></canvas>
@@ -54,83 +51,69 @@
 
         const createScene = function () {
             const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent so CSS gradient shows
+            scene.clearColor = new BABYLON.Color4(0.05, 0.05, 0.05, 1);
 
-            // ISSUE 8: Camera Closeness
-            const camera = new BABYLON.ArcRotateCamera("cam", -Math.PI/2, Math.PI/2.2, 2.0, new BABYLON.Vector3(0, 0.4, 0), scene);
+            // Camera fix: Start at PI/2 to face the front
+            const camera = new BABYLON.ArcRotateCamera("cam", Math.PI/2, Math.PI/2.2, 2.5, new BABYLON.Vector3(0, 0.4, 0), scene);
             camera.attachControl(canvas, true);
-            camera.lowerRadiusLimit = 0.3; // Can almost touch the mesh
-            camera.upperRadiusLimit = 5.0;
-            camera.wheelPrecision = 100; // Smoother zoom
+            camera.lowerRadiusLimit = 0.5;
 
-            // ISSUE 7: Fixed Punctual Light
-            const amygdalaLight = new BABYLON.PointLight("amygdalaLight", new BABYLON.Vector3(0, 0.65, 0.05), scene);
-            amygdalaLight.intensity = 0.01;
-            amygdalaLight.range = 0.3; 
-            amygdalaLight.falloffType = BABYLON.Light.FALLOFF_PHYSICAL; 
+            const brainLight = new BABYLON.PointLight("brainLight", new BABYLON.Vector3(0, 0.65, 0.05), scene);
+            brainLight.intensity = 0.01;
+            brainLight.falloffType = BABYLON.Light.FALLOFF_PHYSICAL;
 
-            // Default Scene Lighting
             const env = scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
-            env.setMainColor(BABYLON.Color3.FromHexString("#111111"));
+            scene.environmentIntensity = 0.4;
 
             BABYLON.SceneLoader.ImportMesh("", "./models/", "human_stress_v01.glb", scene, function (meshes, ps, sk, animGroups) {
                 
-                // ISSUE 1: Less Glossy Body
-                const body = scene.getMeshByName("mesh_body");
-                if(body) {
-                    const glass = new BABYLON.PBRMaterial("glassMat", scene);
-                    glass.alpha = 0.1;
-                    glass.roughness = 0.6; // Higher number = LESS glossy/more matte
-                    glass.transmission = 1.0;
-                    glass.indexOfRefraction = 1.1; 
-                    body.material = glass;
-                }
+                // 180 Degree Rotation Fix
+                if(meshes[0]) meshes[0].rotation = new BABYLON.Vector3(0, Math.PI, 0);
 
-                const heart = scene.getMeshByName("mesh_heart");
-                const vagus = scene.getMeshByName("mesh_vagus");
+                // Update Stats Panel
+                document.getElementById("verts").innerText = scene.getTotalVertices().toLocaleString();
+                document.getElementById("tris").innerText = (scene.getTotalIndices() / 3).toLocaleString();
+                document.getElementById("meshes").innerText = scene.meshes.length;
+
+                // ISSUE 5: Texture Preview Logic
+                const gallery = document.getElementById("texture-gallery");
+                scene.textures.forEach(tex => {
+                    if (tex.name && tex.name.includes("blob")) return; // skip internal blobs
+                    let div = document.createElement("div");
+                    div.innerHTML = `<div class="texture-thumb" style="background-image: url('${tex.url}')"></div>
+                                     <div class="texture-label">${tex.name.substring(0,8)}...</div>`;
+                    gallery.appendChild(div);
+                });
+
+                // Interaction Logic
                 const slider = document.getElementById("stressSlider");
-
                 scene.onBeforeRenderObservable.add(() => {
                     const val = parseFloat(slider.value);
+                    document.getElementById("fps").innerText = engine.getFps().toFixed();
+                    
+                    animGroups.forEach(g => g.speedRatio = 1 + (val * 3));
+                    
+                    brainLight.diffuse = BABYLON.Color3.Lerp(new BABYLON.Color3(0,0,1), new BABYLON.Color3(1,0,0), val);
+                    brainLight.intensity = 0.01 + (val * 0.5);
 
-                    // ISSUE 4: Animation Speed & Color
-                    animGroups.forEach(group => {
-                        group.speedRatio = 1.0 + (val * 2.5); // Fastens up the heart/lungs
-                    });
-
-                    // ISSUE 7: Color Change Logic
-                    amygdalaLight.diffuse = BABYLON.Color3.Lerp(
-                        new BABYLON.Color3(0.1, 0.3, 1.0), // Calm Blue
-                        new BABYLON.Color3(1.0, 0.1, 0.1), // Stress Red
-                        val
-                    );
-                    amygdalaLight.intensity = 0.01 + (val * 0.5);
-
-                    // ISSUE 3: Vagus Movement Sync (The Fix)
-                    if(heart && vagus && heart.morphTargetManager && vagus.morphTargetManager) {
-                        // We use the influence of the heartbeat to drive the nerve
-                        const heartPulse = heart.morphTargetManager.getTarget(0).influence;
-                        vagus.morphTargetManager.getTarget(0).influence = heartPulse;
-                        
-                        // Apply color to the nerve mesh too
-                        if(vagus.material) {
-                            vagus.material.emissiveColor = amygdalaLight.diffuse;
-                            vagus.material.emissiveIntensity = val * 5;
-                        }
+                    // Vagus Sync
+                    const heart = scene.getMeshByName("mesh_heart");
+                    const vagus = scene.getMeshByName("mesh_vagus");
+                    if(heart && vagus && heart.morphTargetManager) {
+                        vagus.morphTargetManager.getTarget(0).influence = heart.morphTargetManager.getTarget(0).influence;
                     }
                 });
 
-                // ISSUE 6: Light Toggle Logic
-                let studioMode = false;
-                document.getElementById("lightToggle").onclick = () => {
-                    studioMode = !studioMode;
-                    if(studioMode) {
-                        scene.lights.forEach(l => l.intensity *= 5);
-                        document.getElementById("lightToggle").innerText = "Switch to Default Light";
-                    } else {
-                        scene.lights.forEach(l => l.intensity /= 5);
-                        document.getElementById("lightToggle").innerText = "Switch to Studio Light";
-                    }
+                // Wireframe & Light Toggles
+                document.getElementById("wireframeBtn").onclick = () => {
+                    meshes.forEach(m => { if(m.material) m.material.wireframe = !m.material.wireframe; });
+                };
+                
+                let studio = false;
+                document.getElementById("lightBtn").onclick = () => {
+                    studio = !studio;
+                    scene.environmentIntensity = studio ? 2.5 : 0.4;
+                    document.getElementById("lightBtn").innerText = studio ? "Studio Light: ON" : "Studio Light: OFF";
                 };
             });
 
