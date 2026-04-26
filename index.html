@@ -11,8 +11,7 @@
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
-            /* Deepened the gray so it looks like a pro 3D software viewport */
-            background: radial-gradient(circle, #444444 0%, #111111 100%); 
+            background: radial-gradient(circle, #222222 0%, #050505 100%); 
             touch-action: none; 
         }
         #renderCanvas { width: 100%; height: 100%; display: block; z-index: 1; position: absolute; outline: none; background: transparent; }
@@ -25,15 +24,15 @@
         
         #left-container {
             position: absolute; top: 20px; left: 20px; z-index: 5;
-            display: flex; flex-direction: column; gap: 15px; pointer-events: none; width: 250px;
+            display: flex; flex-direction: column; gap: 15px; pointer-events: none; width: 260px;
         }
 
         .panel-box { background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; pointer-events: auto; }
         
-        #stats-panel { border-left: 3px solid #00ff00; font-size: 12px; line-height: 1.5; }
+        #stats-panel { border-left: 3px solid #00ff00; font-size: 11px; line-height: 1.5; }
         .stat-val { color: #00ff00; font-weight: bold; }
 
-        #tex-gallery { display: flex; gap: 8px; flex-wrap: wrap; }
+        #tex-gallery { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
         .tex-box { 
             width: 64px; height: 64px; border: 1px solid #444; background-color: #1a1a1a; 
             border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center;
@@ -43,15 +42,15 @@
         .tex-box:hover { border-color: #fff; transform: scale(1.05); }
         .tex-label {
             position: absolute; bottom: 0; left: 0; width: 100%; text-align: center;
-            font-size: 9px; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            font-size: 8px; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             background: rgba(0,0,0,0.8); padding: 3px 0;
         }
 
         .slider-group { margin-top: 15px; text-align: left; }
-        .slider-label { font-size: 10px; color: #aaa; letter-spacing: 1px; display: flex; justify-content: space-between; }
+        .slider-label { font-size: 9px; color: #aaa; letter-spacing: 1px; display: flex; justify-content: space-between; }
         .slider-val { color: #00ff00; }
         input[type=range] { width: 100%; margin-top: 5px; cursor: pointer; accent-color: #ff4d4d; }
-        select { width: 100%; background: #222; color: white; border: 1px solid #555; padding: 6px; margin-top: 5px; font-family: 'Consolas', monospace; border-radius: 4px; cursor: pointer;}
+        select { width: 100%; background: #222; color: white; border: 1px solid #555; padding: 6px; margin-top: 5px; font-family: 'Consolas', monospace; border-radius: 4px; cursor: pointer; font-size: 11px;}
         
         #iblSlider { accent-color: #4da6ff; }
         #expSlider { accent-color: #ffb84d; }
@@ -71,32 +70,13 @@
             cursor: pointer; backdrop-filter: blur(5px); pointer-events: auto;
         }
         #modal-img { max-width: 80vw; max-height: 80vh; border: 2px solid #555; border-radius: 8px; }
-        
-        #crash-screen {
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(200, 0, 0, 0.9); padding: 30px; border: 2px solid white; z-index: 9999;
-            font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
-        }
-
-        @media (max-width: 768px) {
-            #ui-panel { width: 85%; bottom: 15px; padding: 15px; }
-            #left-container { top: 10px; left: 10px; flex-direction: row; flex-wrap: wrap; width: calc(100% - 20px); justify-content: space-between; }
-            .panel-box { width: 100%; box-sizing: border-box; padding: 10px; }
-            #tex-gallery { justify-content: center; }
-            .tex-box { width: 50px; height: 50px; }
-        }
     </style>
 </head>
 <body>
 
-    <div id="crash-screen">
-        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
-        <p id="crash-log">Check your GitHub folder.</p>
-    </div>
-
     <div id="image-modal" onclick="this.style.display='none'">
         <img id="modal-img" src="" alt="Texture Preview">
-        <div style="margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px;">CLICK ANYWHERE TO CLOSE</div>
+        <div style="margin-top: 15px; color: #aaa; font-size: 11px; letter-spacing: 1px;">CLICK ANYWHERE TO CLOSE</div>
     </div>
 
     <div id="left-container">
@@ -104,7 +84,7 @@
             <strong>STATISTICS</strong><br>
             FPS: <span id="fps" class="stat-val">0</span><br>
             Tris: <span id="tris" class="stat-val">0</span> | Verts: <span id="verts" class="stat-val">0</span><br>
-            Total Size: <span id="fileSize" class="stat-val">Calculating...</span>
+            Total Weight: <span id="fileSize" class="stat-val">Calculating...</span>
         </div>
         
         <div id="tex-gallery" class="panel-box" style="background: rgba(0,0,0,0.6);"></div>
@@ -120,13 +100,13 @@
             </div>
 
             <div class="slider-group">
-                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.0</span></div>
-                <input type="range" id="iblSlider" min="0" max="3" step="0.1" value="1.0">
+                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.2</span></div>
+                <input type="range" id="iblSlider" min="0" max="3" step="0.1" value="1.2">
             </div>
             
             <div class="slider-group">
-                <div class="slider-label"><span>EXPOSURE</span> <span id="expVal" class="slider-val">1.0</span></div>
-                <input type="range" id="expSlider" min="0.1" max="4" step="0.1" value="1.0">
+                <div class="slider-label"><span>EXPOSURE</span> <span id="expVal" class="slider-val">1.1</span></div>
+                <input type="range" id="expSlider" min="0.1" max="4" step="0.1" value="1.1">
             </div>
         </div>
     </div>
@@ -152,23 +132,24 @@
             // Setup Tonemapping
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-            scene.imageProcessingConfiguration.exposure = 1.0; 
+            scene.imageProcessingConfiguration.exposure = 1.1; 
 
-            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 3, BABYLON.Vector3.Zero(), scene);
+            // --- CAMERA SETTINGS ---
+            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 6, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
             camera.wheelPrecision = 150; 
             camera.inertia = 0.9; 
-            camera.lowerRadiusLimit = 1.0; 
-            camera.upperRadiusLimit = 10.0;
+            camera.minZ = 0.01; 
+            camera.lowerRadiusLimit = 4.2; 
+            camera.upperRadiusLimit = 15.0;
 
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-            scene.environmentIntensity = 1.0;
+            scene.environmentIntensity = 1.2;
 
-            // --- AMBIENT FILL LIGHT ---
-            // Safely lifts the shadows from beneath so the scene isn't too dark!
+            // Ambient Fill
             const ambientLight = new BABYLON.HemisphericLight("ambientLight", new BABYLON.Vector3(0, 1, 0), scene);
-            ambientLight.intensity = 0.5;
-            ambientLight.groundColor = new BABYLON.Color3(0.1, 0.1, 0.1);
+            ambientLight.intensity = 0.3;
+            ambientLight.groundColor = new BABYLON.Color3(0, 0, 0);
 
             const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
             stressLight.position = new BABYLON.Vector3(20, 40, 20);
@@ -180,10 +161,31 @@
                 
                 camera.setTarget(scene.meshes[0]);
 
+                // --- THE AO FORCE LOGIC (NO DEBUGGER NEEDED) ---
+                scene.materials.forEach(mat => {
+                    if (mat instanceof BABYLON.PBRMaterial) {
+                        const matName = mat.name ? mat.name.toLowerCase() : "";
+                        
+                        if (!matName.includes("vagus") && !matName.includes("glass")) {
+                            // Link ORM to Ambient slot
+                            if (mat.metallicTexture) {
+                                mat.ambientTexture = mat.metallicTexture;
+                                mat.useAmbientOcclusionFromMetallicTextureRed = true;
+                                mat.ambientTextureStrength = 2.0; 
+                                mat.ambientTextureImpactOnAnalyticalLights = 1.0;
+                                
+                                // FORCE A RE-SYNC: This mimics what the debugger does
+                                mat.markDirty(); 
+                            }
+                        }
+                    }
+                });
+
                 if (scene.animationGroups && scene.animationGroups.length > 0) {
                     scene.animationGroups.forEach(anim => anim.play(true));
                 }
 
+                // Stats & Size Logic
                 let totalTris = 0;
                 let totalVerts = 0;
                 scene.meshes.forEach(m => {
@@ -194,37 +196,19 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                // --- SMART TOTAL FILE SIZE CALCULATION ---
-                // Pings the headers of the files to get their exact byte sizes without downloading them twice
-                const filesToSize = [
-                    "./models/human_stress_v01.bin",
-                    "./models/body_baseColor.jpg",
-                    "./models/body_normal.jpg",
-                    "./models/body_occlusionRoughnessMetallic.jpg"
-                ];
-                
-                Promise.all(filesToSize.map(url => 
-                    fetch(url, { method: 'HEAD' })
-                        .then(res => parseInt(res.headers.get('content-length') || 0, 10))
-                        .catch(() => 0)
-                )).then(sizes => {
+                const filesToSize = ["./models/human_stress_v01.bin", "./models/body_baseColor.jpg", "./models/body_normal.jpg", "./models/body_occlusionRoughnessMetallic.jpg"];
+                Promise.all(filesToSize.map(url => fetch(url, { method: 'HEAD' }).then(res => parseInt(res.headers.get('content-length') || 0, 10)).catch(() => 0)))
+                .then(sizes => {
                     const totalBytes = sizes.reduce((a, b) => a + b, 0);
-                    if (totalBytes > 0) {
-                        document.getElementById("fileSize").innerText = (totalBytes / (1024 * 1024)).toFixed(2) + " MB";
-                    } else {
-                        document.getElementById("fileSize").innerText = "Ready";
-                    }
+                    document.getElementById("fileSize").innerText = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(2) + " MB" : "Ready";
                 });
 
+                // Vagus Control
                 let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
-                let originalVagusColor = new BABYLON.Color3(0.1, 0.3, 1.0);
-                let originalVagusIntensity = 2.0;
-                
-                if (vagusMat && vagusMat.emissiveColor) {
-                    originalVagusColor = vagusMat.emissiveColor.clone();
-                    originalVagusIntensity = vagusMat.emissiveIntensity || 2.0;
-                }
+                let originalVagusColor = vagusMat && vagusMat.emissiveColor ? vagusMat.emissiveColor.clone() : new BABYLON.Color3(0.1, 0.3, 1.0);
+                let originalVagusIntensity = vagusMat ? (vagusMat.emissiveIntensity || 2.0) : 2.0;
 
+                // UI Texture Gallery
                 const gallery = document.getElementById("tex-gallery");
                 if (gallery.children.length === 0) {
                     const textureFiles = [
@@ -232,18 +216,11 @@
                         { file: "body_normal_512.jpg", full: "body_normal.jpg", label: "Normal" },
                         { file: "body_occlusionRoughnessMetallic_512.jpg", full: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
                     ];
-
                     textureFiles.forEach(tex => {
                         let box = document.createElement("div");
                         box.className = "tex-box";
-                        const thumbPath = `./models/${tex.file}`;
-                        const fullPath = `./models/${tex.full}`;
-                        
-                        box.style.backgroundImage = `url('${thumbPath}')`;
-                        box.onclick = () => {
-                            document.getElementById('modal-img').src = fullPath; 
-                            document.getElementById('image-modal').style.display = 'flex';
-                        };
+                        box.style.backgroundImage = `url('./models/${tex.file}')`;
+                        box.onclick = () => { document.getElementById('modal-img').src = `./models/${tex.full}`; document.getElementById('image-modal').style.display = 'flex'; };
                         let label = document.createElement("div");
                         label.className = "tex-label";
                         label.innerText = tex.label;
@@ -252,6 +229,7 @@
                     });
                 }
 
+                // Wireframe Button
                 const wireframeBtn = document.getElementById("wireframe-btn");
                 let isWireframe = false;
                 wireframeBtn.addEventListener("click", () => {
@@ -261,80 +239,42 @@
                     scene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
                 });
 
+                // Lighting Controls
                 const stressSlider = document.getElementById("stressSlider");
                 const iblSlider = document.getElementById("iblSlider");
                 const expSlider = document.getElementById("expSlider");
                 const tonemapSelect = document.getElementById("tonemapSelect");
-                
                 const iblVal = document.getElementById("iblVal");
                 const expVal = document.getElementById("expVal");
 
                 tonemapSelect.addEventListener("change", (e) => {
-                    if (e.target.value === "aces") {
-                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
-                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-                    } else if (e.target.value === "standard") {
-                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
-                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
-                    } else {
-                        scene.imageProcessingConfiguration.toneMappingEnabled = false;
-                    }
+                    scene.imageProcessingConfiguration.toneMappingEnabled = e.target.value !== "none";
+                    if(e.target.value === "aces") scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+                    if(e.target.value === "standard") scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
                 });
 
-                iblSlider.addEventListener("input", () => {
-                    const val = parseFloat(iblSlider.value);
-                    scene.environmentIntensity = val;
-                    iblVal.innerText = val.toFixed(1);
-                });
-
-                expSlider.addEventListener("input", () => {
-                    const val = parseFloat(expSlider.value);
-                    scene.imageProcessingConfiguration.exposure = val;
-                    expVal.innerText = val.toFixed(1);
-                });
-
-                const fpsElem = document.getElementById("fps");
+                iblSlider.addEventListener("input", () => { scene.environmentIntensity = parseFloat(iblSlider.value); iblVal.innerText = parseFloat(iblSlider.value).toFixed(1); });
+                expSlider.addEventListener("input", () => { scene.imageProcessingConfiguration.exposure = parseFloat(expSlider.value); expVal.innerText = parseFloat(expSlider.value).toFixed(1); });
 
                 scene.onBeforeRenderObservable.add(() => {
-                    let currentFps = engine.getFps();
-                    fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
-                    
+                    document.getElementById("fps").innerText = engine.getFps().toFixed();
                     const stressLevel = parseFloat(stressSlider.value);
                     let colorLerpFactor = stressLevel > 0.33 ? (stressLevel - 0.33) / 0.67 : 0;
-
                     const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
                     const currentColor = BABYLON.Color3.Lerp(originalVagusColor, peakColor, colorLerpFactor);
-
                     stressLight.intensity = stressLevel * 0.5;
-
-                    if (scene.animationGroups) {
-                        const speed = 1.0 + (stressLevel * 3.0); 
-                        scene.animationGroups.forEach(anim => anim.speedRatio = speed);
-                    }
-
-                    if (vagusMat) {
-                        vagusMat.emissiveColor = currentColor;
-                        vagusMat.emissiveIntensity = originalVagusIntensity + (colorLerpFactor * 15.0); 
-                    }
+                    if (scene.animationGroups) { scene.animationGroups.forEach(anim => anim.speedRatio = 1.0 + (stressLevel * 3.0)); }
+                    if (vagusMat) { vagusMat.emissiveColor = currentColor; vagusMat.emissiveIntensity = originalVagusIntensity + (colorLerpFactor * 15.0); }
                 });
 
             } catch (error) {
-                document.getElementById('crash-screen').style.display = 'block';
                 console.error("LOAD ERROR:", error);
             }
-
             return scene;
         };
 
-        createScene().then(scene => {
-            engine.runRenderLoop(() => {
-                scene.render();
-            });
-        });
-
-        window.addEventListener("resize", function () {
-            engine.resize();
-        });
+        createScene().then(scene => { engine.runRenderLoop(() => scene.render()); });
+        window.addEventListener("resize", () => engine.resize());
     </script>
 </body>
 </html>
