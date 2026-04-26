@@ -6,7 +6,8 @@
     
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-       
+    <script src="https://cdn.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
+    
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
@@ -165,9 +166,9 @@
                 const gallery = document.getElementById("tex-gallery");
                 if (gallery.children.length === 0) {
                     const textureFiles = [
-                        { file: "body_baseColor_512.jpg", label: "Base Color" },
-                        { file: "body_normal_512.jpg", label: "Normal" },
-                        { file: "body_occlusionRoughnessMetallic_512.jpg", label: "ORM Map" }
+                        { file: "body_baseColor.jpg", label: "Base Color" },
+                        { file: "body_normal.jpg", label: "Normal" },
+                        { file: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
                     ];
 
                     textureFiles.forEach(tex => {
@@ -204,7 +205,7 @@
                     fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
                     
                     const stressLevel = parseFloat(slider.value);
-                    let colorLerpFactor = stressLevel > 0.33 ? (stressLevel - 0.33) / 0.67 : 1;
+                    let colorLerpFactor = stressLevel > 0.33 ? (stressLevel - 0.33) / 0.67 : 0;
 
                     const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
                     const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
@@ -220,7 +221,7 @@
 
                     if (vagusMat) {
                         vagusMat.emissiveColor = currentColor;
-                        vagusMat.emissiveIntensity = 1.0 + (colorLerpFactor * 15.0); 
+                        vagusMat.emissiveIntensity = 2.0 + (colorLerpFactor * 15.0); 
                     }
                 });
 
