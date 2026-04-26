@@ -159,8 +159,9 @@
             camera.attachControl(canvas, true);
             camera.wheelPrecision = 150; 
             camera.inertia = 0.9; 
+            camera.radius = 1.0; 
             camera.minZ = 0.01; // Fixes "slicing" geometry
-            camera.lowerRadiusLimit = 1; // Prevents camera from entering body
+            camera.lowerRadiusLimit = 0.5; // Prevents camera from entering body
             camera.upperRadiusLimit = 10.0;
 
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
