@@ -146,18 +146,31 @@
                     mainLight.intensity = 0.5; 
                 }
 
-                // --- THE "PURE AO" TIMING FIX ---
-                // We run this immediately on load, and we DO NOT check if the texture is ready yet.
-                // We force the rules onto the material so it is ready whenever the texture finishes downloading.
+                // --- THE NUCLEAR AO OVERRIDE ---
+                // 1. Manually load the raw image directly from GitHub
+                const manualOrmTexture = new BABYLON.Texture("./models/body_occlusionRoughnessMetallic.jpg", scene);
+                
+                // 2. Force it to project onto the primary UV channel (UV0)
+                manualOrmTexture.coordinatesIndex = 0;
+
                 scene.materials.forEach(mat => {
                     if (mat instanceof BABYLON.PBRMaterial) {
                         const matName = mat.name ? mat.name.toLowerCase() : "";
                         
-                        // Prevent AO from making the glass dirty or the nerve dark
                         if (!matName.includes("vagus") && !matName.includes("glass")) {
+                            
+                            // 3. Slot the manual texture into BOTH required channels
+                            mat.metallicTexture = manualOrmTexture;
+                            mat.ambientTexture = manualOrmTexture;
+                            
+                            // 4. EXPLICITLY TELL BABYLON WHAT EACH RGB CHANNEL DOES
                             mat.useAmbientOcclusionFromMetallicTextureRed = true;
+                            mat.useRoughnessFromMetallicTextureGreen = true;
+                            mat.useMetallnessFromMetallicTextureBlue = true;
+                            
+                            // 5. Turn up the contrast and mathematically force the shadows onto the direct lights
                             mat.ambientTextureStrength = 3.0; 
-                            mat.ambientTextureImpactOnAnalyticalLights = BABYLON.PBRMaterial.AMBIENTLOCALMODE_MULTIPLICATIVE;
+                            mat.ambientTextureImpactOnAnalyticalLights = 1.0; // Fixed from the broken enum!
                             mat.ambientTextureImpactOnEnvironment = 1.0;
                         }
                     }
