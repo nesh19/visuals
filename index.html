@@ -65,20 +65,9 @@
         }
         #modal-img { max-width: 80vw; max-height: 80vh; border: 2px solid #555; border-radius: 8px; }
         .modal-hint { margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px; }
-        
-        #crash-screen {
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(200, 0, 0, 0.9); padding: 30px; border: 2px solid white; z-index: 9999;
-            font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
-        }
     </style>
 </head>
 <body>
-
-    <div id="crash-screen">
-        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
-        <p id="crash-log">Check your GitHub folder. Is the .bin file missing?</p>
-    </div>
 
     <div id="image-modal" onclick="this.style.display='none'">
         <img id="modal-img" src="" alt="Texture Preview">
@@ -124,10 +113,14 @@
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
                 
-                // --- UPDATE: STUDIO ENVIRONMENT MAP ---
-                scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-                // Increased intensity slightly to make the studio reflections pop
-                scene.environmentIntensity = 1.2; 
+                // --- THE IBL FIX ---
+                // We use the helper to guarantee the environment map is forced onto all meshes
+                var envHelper = scene.createDefaultEnvironment({
+                    createSkybox: false, 
+                    createGround: false,
+                    environmentTexture: "https://assets.babylonjs.com/environments/studio.env"
+                });
+                scene.environmentIntensity = 1.5; 
 
                 const engine = viewer.engine;
                 const slider = document.getElementById("stressSlider");
@@ -148,25 +141,19 @@
                             mainLight.intensity = 0.5; 
                         }
 
-                        // --- THE ULTIMATE AO OVERRIDE ---
+                        // --- THE PURE AO FIX ---
                         scene.materials.forEach(mat => {
                             if (mat instanceof BABYLON.PBRMaterial) {
-                                
+                                // If an ORM map exists in the metallic slot...
                                 if (mat.metallicTexture) {
-                                    // 1. Force the Ambient slot to use the ORM map
-                                    mat.ambientTexture = mat.metallicTexture;
-                                    
-                                    // 2. Tell it the red channel is the AO
+                                    // 1. Tell it to read the RED channel for Occlusion
                                     mat.useAmbientOcclusionFromMetallicTextureRed = true;
                                     
-                                    // 3. Make the shadow dark
-                                    mat.ambientTextureStrength = 2.0; 
+                                    // 2. Crank up the intensity so it is highly visible
+                                    mat.ambientTextureStrength = 3.0; 
                                     
-                                    // 4. Force the shadow to draw over direct lights
-                                    mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
-                                    
-                                    // 5. Force the shadow to block the studio environment reflections
-                                    mat.ambientTextureImpactOnEnvironment = 1.0;
+                                    // 3. Force the Ambient Occlusion to darken the DIRECT light as well as the IBL
+                                    mat.ambientTextureImpactOnAnalyticalLights = BABYLON.PBRMaterial.AMBIENTLOCALMODE_MULTIPLICATIVE;
                                 }
                             }
                         });
@@ -256,11 +243,6 @@
                         }
                     }
                 });
-            });
-            
-            viewer.onModelErrorObservable.add(function(error) {
-                document.getElementById('crash-screen').style.display = 'block';
-                console.error("LOAD ERROR:", error);
             });
         });
     </script>
