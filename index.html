@@ -5,7 +5,7 @@
     <title>Technical Artist Portfolio | nesh19</title>
     
     <script src="https://babylonjs.com"></script>
-    <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
+    <script src="https://babylonjs.com"></script>
     
     <style>
         body { 
@@ -27,23 +27,17 @@
             border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px;
             letter-spacing: 1px; transition: all 0.2s ease;
         }
-        #wireframe-btn:hover { background: #444; color: #fff; border-color: #888; }
 
         #left-container {
             position: absolute; top: 20px; left: 20px; z-index: 100;
-            display: flex; flex-direction: column; gap: 15px; pointer-events: none;
+            display: flex; flex-direction: column; gap: 15px;
         }
 
         #stats-panel { 
             background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border-left: 3px solid #00ff00; 
-            font-size: 12px; line-height: 1.5; pointer-events: auto;
+            font-size: 12px; line-height: 1.5;
         }
         .stat-val { color: #00ff00; font-weight: bold; }
-
-        #tex-gallery { 
-            display: flex; gap: 8px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; 
-            flex-wrap: wrap; max-width: 250px; pointer-events: auto;
-        }
     </style>
 </head>
 <body>
@@ -55,7 +49,6 @@
             Total Tris: <span id="tris" class="stat-val">0</span><br>
             Total Verts: <span id="verts" class="stat-val">0</span>
         </div>
-        <div id="tex-gallery"></div>
     </div>
 
     <div id="ui-panel">
@@ -64,7 +57,7 @@
         <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
     </div>
 
-    <!-- Ensure model path is relative and matches your folder structure exactly -->
+    <!-- Corrected relative path for GitHub Pages -->
     <babylon id="myViewer" model="models/human_stress_v01.gltf" extends="minimal"></babylon>
 
     <script>
@@ -73,41 +66,47 @@
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
                 
-                // Set up Environment
-                var envHelper = scene.createDefaultEnvironment({
+                // Add default lighting environment
+                scene.createDefaultEnvironment({
                     createSkybox: false, 
                     createGround: false,
                     environmentTexture: "https://babylonjs.com"
                 });
 
-                // --- THE AO & MATERIAL FIX ---
+                // --- THE AO PACKED MAP FIX ---
                 scene.onReadyObservable.add(() => {
                     scene.materials.forEach(mat => {
                         if (mat instanceof BABYLON.PBRMaterial) {
-                            // Fix for ORM maps (Occlusion, Roughness, Metallic)
+                            // If the model has your ORM map in the metallic slot:
                             if (mat.metallicTexture) {
-                                // 1. Tell it to read AO from the Red channel
+                                // 1. Force use of RED channel for AO
                                 mat.useAmbientOcclusionFromMetallicTextureRed = true;
-                                // 2. Ensure AO affects all lighting
+                                
+                                // 2. Ensure it affects direct lights (Standard is only IBL)
                                 mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
-                                // 3. Set strength (increase to 2.0+ to test)
-                                mat.ambientTextureStrength = 1.0; 
+                                
+                                // 3. Use UV channel 0 (First set) instead of channel 1
+                                if (mat.ambientTexture) {
+                                    mat.ambientTexture.coordinatesIndex = 0;
+                                }
+                                
+                                // 4. Set strength higher to confirm it is working
+                                mat.ambientTextureStrength = 1.5; 
                             }
                         }
                     });
                 });
 
-                // UI Logic
+                // UI & Stats Logic
                 const fpsElem = document.getElementById("fps");
                 const trisElem = document.getElementById("tris");
                 const vertsElem = document.getElementById("verts");
 
                 scene.onBeforeRenderObservable.add(() => {
                     fpsElem.innerText = viewer.engine.getFps().toFixed(0);
-                    // Update stats only once when loaded
+                    
                     if (trisElem.innerText === "0" && scene.meshes.length > 0) {
-                        let totalTris = 0;
-                        let totalVerts = 0;
+                        let totalTris = 0, totalVerts = 0;
                         scene.meshes.forEach(m => {
                             if (m.getTotalIndices()) totalTris += m.getTotalIndices() / 3;
                             if (m.getTotalVertices()) totalVerts += m.getTotalVertices();
@@ -118,13 +117,10 @@
                 });
             });
 
-            // Wireframe Toggle Logic
-            const wireframeBtn = document.getElementById("wireframe-btn");
-            let isWireframe = false;
-            wireframeBtn.addEventListener("click", () => {
-                isWireframe = !isWireframe;
+            // Wireframe Toggle
+            document.getElementById("wireframe-btn").addEventListener("click", () => {
                 viewer.sceneManager.scene.materials.forEach(mat => {
-                    if (mat) mat.wireframe = isWireframe;
+                    if (mat) mat.wireframe = !mat.wireframe;
                 });
             });
         });
