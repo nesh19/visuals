@@ -65,9 +65,20 @@
         }
         #modal-img { max-width: 80vw; max-height: 80vh; border: 2px solid #555; border-radius: 8px; }
         .modal-hint { margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px; }
+        
+        #crash-screen {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(200, 0, 0, 0.9); padding: 30px; border: 2px solid white; z-index: 9999;
+            font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
+        }
     </style>
 </head>
 <body>
+
+    <div id="crash-screen">
+        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
+        <p id="crash-log">Check your GitHub folder. Is the .bin file missing?</p>
+    </div>
 
     <div id="image-modal" onclick="this.style.display='none'">
         <img id="modal-img" src="" alt="Texture Preview">
@@ -78,10 +89,9 @@
         <div id="stats-panel">
             <strong>STATISTICS</strong><br>
             FPS: <span id="fps" class="stat-val">0</span><br>
-            Draw Calls: <span id="drawCalls" class="stat-val">0</span><br>
             Total Tris: <span id="tris" class="stat-val">0</span><br>
             Total Verts: <span id="verts" class="stat-val">0</span><br>
-            File Size: <span id="fileSize" class="stat-val">Loading...</span>
+            Geometry Size: <span id="fileSize" class="stat-val">Calculating...</span>
         </div>
         <div id="tex-gallery"></div>
     </div>
@@ -97,61 +107,61 @@
     <script>
         BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
             
+            // --- FIX 1: TOPOLOGY TOGGLE ---
+            // Attached safely outside the loading loops so it always has access to the active scene
+            const wireframeBtn = document.getElementById("wireframe-btn");
+            let isWireframe = false;
+            wireframeBtn.addEventListener("click", () => {
+                isWireframe = !isWireframe;
+                wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
+                wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
+                
+                if (viewer.sceneManager && viewer.sceneManager.scene) {
+                    viewer.sceneManager.scene.materials.forEach(mat => {
+                        if (mat) {
+                            mat.wireframe = isWireframe;
+                        }
+                    });
+                }
+            });
+
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
                 
                 const engine = viewer.engine;
-                const instrumentation = new BABYLON.SceneInstrumentation(scene);
-                instrumentation.captureDrawCalls = true;
-
                 const slider = document.getElementById("stressSlider");
-                const wireframeBtn = document.getElementById("wireframe-btn");
                 const fpsElem = document.getElementById("fps");
-                const drawCallsElem = document.getElementById("drawCalls");
                 const trisElem = document.getElementById("tris");
                 const vertsElem = document.getElementById("verts");
                 const gallery = document.getElementById("tex-gallery");
 
                 let isInitialized = false;
                 let vagusMat = null;
-                let isWireframe = false;
 
-                // Wireframe Button Listener
-                wireframeBtn.addEventListener("click", () => {
-                    isWireframe = !isWireframe;
-                    scene.materials.forEach(mat => {
-                        if (mat instanceof BABYLON.Material) {
-                            mat.wireframe = isWireframe;
-                        }
-                    });
-                    wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
-                    wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
-                });
-
-                // THE FIX: We put the setup logic inside the render loop, waiting for meshes to exist.
-                // This guarantees it will run regardless of how fast GitHub caches the file.
                 scene.onBeforeRenderObservable.add(() => {
                     
-                    // --- ONE-TIME INITIALIZATION ---
                     if (!isInitialized && scene.meshes.length > 1 && scene.materials.length > 0) {
                         
-                        // 1. THE AO FIX (Targeting the glTF ORM map specifically)
+                        // --- FIX 2: THE AMBIENT OCCLUSION OVERRIDE ---
                         scene.materials.forEach(mat => {
-                            if (mat instanceof BABYLON.PBRMaterial && mat.metallicTexture) {
-                                mat.ambientTextureStrength = 4.0; // Cranked up to 4x multiplier
-                                mat.useAmbientInGrayScale = true; 
+                            if (mat instanceof BABYLON.PBRMaterial) {
+                                // glTF loaders combine ORM maps into the "metallicTexture" slot
+                                if (mat.metallicTexture) {
+                                    mat.useAmbientOcclusionFromMetallicTextureRed = true;
+                                    mat.ambientTextureStrength = 3.0; // Pushes the contrast
+                                    
+                                    // THE MAGIC BULLET: Forces AO to block direct lights!
+                                    mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
+                                }
                             }
                         });
 
-                        // 2. Safely find the Vagus material
                         vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus_glow"));
 
-                        // 3. Kickstart Animations
                         if (scene.animationGroups && scene.animationGroups.length > 0) {
                             scene.animationGroups.forEach(anim => anim.play(true));
                         }
 
-                        // 4. Populate Stats
                         let totalTris = 0;
                         let totalVerts = 0;
                         scene.meshes.forEach(m => {
@@ -162,7 +172,16 @@
                         trisElem.innerText = Math.round(totalTris).toLocaleString();
                         vertsElem.innerText = totalVerts.toLocaleString();
 
-                        // 5. Populate Gallery
+                        // --- FIX 3: BULLETPROOF FILE SIZE FETCH ---
+                        // Reaches directly for the .bin blob instead of relying on missing headers
+                        fetch("./models/human_stress_v01.bin")
+                            .then(response => response.blob())
+                            .then(blob => {
+                                document.getElementById("fileSize").innerText = (blob.size / (1024 * 1024)).toFixed(2) + " MB";
+                            })
+                            .catch(() => document.getElementById("fileSize").innerText = "Unknown");
+
+                        // Build Texture Gallery
                         if (gallery.children.length === 0) {
                             const textureFiles = [
                                 { file: "body_baseColor.jpg", label: "Base Color" },
@@ -190,21 +209,14 @@
                             });
                         }
 
-                        // 6. Fetch File Size
-                        fetch("./models/human_stress_v01.gltf").then(response => {
-                            const size = response.headers.get("content-length");
-                            if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
-                        }).catch(() => {});
-
                         isInitialized = true;
                     }
 
-                    // --- CONTINUOUS REAL-TIME UPDATES ---
+                    // --- REAL-TIME LOOP ---
                     if (isInitialized) {
                         const stressLevel = parseFloat(slider.value);
                         
                         fpsElem.innerText = engine.getFps().toFixed();
-                        drawCallsElem.innerText = instrumentation.drawCallsCounter.current;
                         
                         const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
                         const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
@@ -228,6 +240,11 @@
                         }
                     }
                 });
+            });
+            
+            viewer.onModelErrorObservable.add(function(error) {
+                document.getElementById('crash-screen').style.display = 'block';
+                console.error("LOAD ERROR:", error);
             });
         });
     </script>
