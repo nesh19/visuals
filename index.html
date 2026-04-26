@@ -21,16 +21,13 @@
         }
         input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; accent-color: #ff4d4d; }
 
-        /* NEW: Button styling for the Wireframe Toggle */
         #wireframe-btn {
             width: 100%; margin-top: 15px; padding: 8px; cursor: pointer;
             background: #222; color: #aaa; border: 1px solid #555;
             border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px;
             letter-spacing: 1px; transition: all 0.2s ease;
         }
-        #wireframe-btn:hover {
-            background: #444; color: #fff; border-color: #888;
-        }
+        #wireframe-btn:hover { background: #444; color: #fff; border-color: #888; }
 
         #left-container {
             position: absolute; top: 20px; left: 20px; z-index: 100;
@@ -53,9 +50,7 @@
             background-size: cover; background-position: center; cursor: pointer;
             transition: border-color 0.2s ease, transform 0.2s ease;
         }
-        .tex-box:hover {
-            border-color: #fff; transform: scale(1.05);
-        }
+        .tex-box:hover { border-color: #fff; transform: scale(1.05); }
         .tex-label {
             position: absolute; bottom: 0; left: 0; width: 100%; text-align: center;
             font-size: 9px; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -68,16 +63,23 @@
             justify-content: center; align-items: center; flex-direction: column;
             cursor: pointer; backdrop-filter: blur(5px); pointer-events: auto;
         }
-        #modal-img {
-            max-width: 80vw; max-height: 80vh; border: 2px solid #555; border-radius: 8px;
-            box-shadow: 0px 10px 30px rgba(0,0,0,0.8);
-        }
-        .modal-hint {
-            margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px;
+        #modal-img { max-width: 80vw; max-height: 80vh; border: 2px solid #555; border-radius: 8px; }
+        .modal-hint { margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px; }
+
+        /* THE NEW CRASH SCREEN */
+        #crash-screen {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(200, 0, 0, 0.9); padding: 30px; border: 2px solid white; z-index: 9999;
+            font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
         }
     </style>
 </head>
 <body>
+
+    <div id="crash-screen">
+        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
+        <p id="crash-log">Check your GitHub folder. Is the .bin file missing?</p>
+    </div>
 
     <div id="image-modal" onclick="this.style.display='none'">
         <img id="modal-img" src="" alt="Texture Preview">
@@ -93,14 +95,12 @@
             Total Verts: <span id="verts" class="stat-val">0</span><br>
             File Size: <span id="fileSize" class="stat-val">Loading...</span>
         </div>
-        
         <div id="tex-gallery"></div>
     </div>
 
     <div id="ui-panel">
         <strong style="letter-spacing: 1px; color:#aaa;">CORTISOL / STRESS</strong>
         <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
-        
         <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
     </div>
 
@@ -109,15 +109,127 @@
     <script>
         BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
             
+            // This forces the background to be transparent immediately, fixing the lost CSS gradient
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
             });
 
+            // DIAGNOSTIC TOOL: This catches if your files are missing from GitHub!
+            viewer.onModelErrorObservable.add(function(error) {
+                document.getElementById('crash-screen').style.display = 'block';
+                console.error("LOAD ERROR:", error);
+            });
+
             viewer.onModelLoadedObservable.add(function(model) {
-                const scene = viewer.sceneManager.scene;
-                const engine = viewer.engine;
-                
-                const mainLight = scene.lights[0]; 
-                scene.environmentIntensity = 0.5; 
-                
-                const instrumentation = new BABYLON.
+                try {
+                    const scene = viewer.sceneManager.scene;
+                    const engine = viewer.engine;
+                    
+                    // Double check clear color
+                    scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
+                    
+                    const mainLight = scene.lights[0]; 
+                    scene.environmentIntensity = 0.5; 
+                    
+                    const instrumentation = new BABYLON.SceneInstrumentation(scene);
+                    instrumentation.captureDrawCalls = true;
+
+                    scene.materials.forEach(mat => {
+                        if (mat instanceof BABYLON.PBRMaterial && mat.ambientTexture) {
+                            mat.ambientTextureStrength = 2.0; 
+                            mat.useAmbientInGrayScale = true; 
+                        }
+                    });
+
+                    const slider = document.getElementById("stressSlider");
+                    const wireframeBtn = document.getElementById("wireframe-btn");
+                    
+                    // SAFE SEARCH: Prevents crash if a material lacks a name
+                    const vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus_glow"));
+
+                    let isWireframe = false;
+                    wireframeBtn.addEventListener("click", () => {
+                        isWireframe = !isWireframe;
+                        scene.materials.forEach(mat => {
+                            if (mat instanceof BABYLON.Material) {
+                                mat.wireframe = isWireframe;
+                            }
+                        });
+                        wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
+                        wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
+                    });
+
+                    fetch("./models/human_stress_v01.gltf").then(response => {
+                        const size = response.headers.get("content-length");
+                        if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
+                    }).catch(() => document.getElementById("fileSize").innerText = "Unknown");
+
+                    let totalTris = 0;
+                    let totalVerts = 0;
+                    scene.meshes.forEach(m => {
+                        totalVerts += m.getTotalVertices();
+                        const indices = m.getIndices();
+                        if (indices) totalTris += (indices.length / 3);
+                    });
+                    document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
+                    document.getElementById("verts").innerText = totalVerts.toLocaleString();
+
+                    const gallery = document.getElementById("tex-gallery");
+                    const textureFiles = [
+                        { file: "body_baseColor.jpg", label: "Base Color" },
+                        { file: "body_normal.jpg", label: "Normal" },
+                        { file: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
+                    ];
+
+                    textureFiles.forEach(tex => {
+                        let box = document.createElement("div");
+                        box.className = "tex-box";
+                        const fullPath = `./models/${tex.file}`;
+                        box.style.backgroundImage = `url('${fullPath}')`;
+                        
+                        box.onclick = function() {
+                            document.getElementById('modal-img').src = fullPath;
+                            document.getElementById('image-modal').style.display = 'flex';
+                        };
+                        
+                        let label = document.createElement("div");
+                        label.className = "tex-label";
+                        label.innerText = tex.label;
+                        
+                        box.appendChild(label);
+                        gallery.appendChild(box);
+                    });
+
+                    scene.animationGroups.forEach(anim => anim.play(true));
+
+                    scene.onBeforeRenderObservable.add(() => {
+                        const stressLevel = parseFloat(slider.value);
+                        document.getElementById("fps").innerText = engine.getFps().toFixed();
+                        document.getElementById("drawCalls").innerText = instrumentation.drawCallsCounter.current;
+                        
+                        const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
+                        const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
+                        const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, stressLevel);
+
+                        const lightStress = stressLevel * 0.3; 
+                        if (mainLight) {
+                            mainLight.intensity = 1.0 - (lightStress * 0.7); 
+                            mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
+                        }
+
+                        const speed = 1.0 + (stressLevel * 3.0); 
+                        scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+
+                        if(vagusMat) {
+                            vagusMat.emissiveColor = currentColor;
+                            vagusMat.emissiveIntensity = 2.0 + (stressLevel * 15.0); 
+                        }
+                    });
+                } catch(err) {
+                    console.error("UI SCRIPT CRASHED:", err);
+                }
+            });
+        });
+    </script>
+</body>
+</html>
