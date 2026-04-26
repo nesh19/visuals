@@ -143,7 +143,7 @@
                     if (!isInitialized && scene.meshes.length > 1 && scene.materials.length > 0) {
                         
                         // NEW: Launch the Babylon Inspector immediately so you can debug!
-                        scene.debugLayer.show({ embedMode: true });
+                        scene.debugLayer.show({ globalRoot: document.body });
 
                         const mainLight = scene.lights[0];
                         if (mainLight) {
