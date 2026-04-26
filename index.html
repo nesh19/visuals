@@ -107,8 +107,6 @@
     <script>
         BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
             
-            // --- FIX 1: TOPOLOGY TOGGLE ---
-            // Attached safely outside the loading loops so it always has access to the active scene
             const wireframeBtn = document.getElementById("wireframe-btn");
             let isWireframe = false;
             wireframeBtn.addEventListener("click", () => {
@@ -128,6 +126,11 @@
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
                 
+                // --- FIX 1: ADD IBL ENVIRONMENT TEXTURE FOR AO ---
+                // This mimics the Sandbox environment, allowing PBR materials to calculate shadows
+                scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/environment.env", scene);
+                scene.environmentIntensity = 1.0; 
+
                 const engine = viewer.engine;
                 const slider = document.getElementById("stressSlider");
                 const fpsElem = document.getElementById("fps");
@@ -142,15 +145,11 @@
                     
                     if (!isInitialized && scene.meshes.length > 1 && scene.materials.length > 0) {
                         
-                        // --- FIX 2: THE AMBIENT OCCLUSION OVERRIDE ---
                         scene.materials.forEach(mat => {
                             if (mat instanceof BABYLON.PBRMaterial) {
-                                // glTF loaders combine ORM maps into the "metallicTexture" slot
                                 if (mat.metallicTexture) {
                                     mat.useAmbientOcclusionFromMetallicTextureRed = true;
-                                    mat.ambientTextureStrength = 3.0; // Pushes the contrast
-                                    
-                                    // THE MAGIC BULLET: Forces AO to block direct lights!
+                                    mat.ambientTextureStrength = 3.0; 
                                     mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
                                 }
                             }
@@ -172,8 +171,6 @@
                         trisElem.innerText = Math.round(totalTris).toLocaleString();
                         vertsElem.innerText = totalVerts.toLocaleString();
 
-                        // --- FIX 3: BULLETPROOF FILE SIZE FETCH ---
-                        // Reaches directly for the .bin blob instead of relying on missing headers
                         fetch("./models/human_stress_v01.bin")
                             .then(response => response.blob())
                             .then(blob => {
@@ -181,7 +178,6 @@
                             })
                             .catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
-                        // Build Texture Gallery
                         if (gallery.children.length === 0) {
                             const textureFiles = [
                                 { file: "body_baseColor.jpg", label: "Base Color" },
@@ -215,12 +211,20 @@
                     // --- REAL-TIME LOOP ---
                     if (isInitialized) {
                         const stressLevel = parseFloat(slider.value);
-                        
                         fpsElem.innerText = engine.getFps().toFixed();
                         
+                        // --- FIX 2: DELAYED VAGUS GLOW MATH ---
+                        let colorLerpFactor = 0;
+                        
+                        // If slider is past 33%, start transitioning the color. Otherwise, stay at 0 (Calm Blue)
+                        if (stressLevel > 0.33) {
+                            // This math remaps the 0.33 -> 1.0 range into a clean 0.0 -> 1.0 range
+                            colorLerpFactor = (stressLevel - 0.33) / 0.67;
+                        }
+
                         const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
                         const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
-                        const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, stressLevel);
+                        const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, colorLerpFactor);
 
                         const mainLight = scene.lights[0];
                         if (mainLight && mainLight.diffuse) {
@@ -229,6 +233,7 @@
                             mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
                         }
 
+                        // Animation speed still scales with the whole slider
                         if (scene.animationGroups) {
                             const speed = 1.0 + (stressLevel * 3.0); 
                             scene.animationGroups.forEach(anim => anim.speedRatio = speed);
@@ -236,7 +241,8 @@
 
                         if (vagusMat) {
                             vagusMat.emissiveColor = currentColor;
-                            vagusMat.emissiveIntensity = 2.0 + (stressLevel * 15.0); 
+                            // Intensity scales with the delayed math too, so it doesn't get crazy bright until it turns red
+                            vagusMat.emissiveIntensity = 2.0 + (colorLerpFactor * 15.0); 
                         }
                     }
                 });
