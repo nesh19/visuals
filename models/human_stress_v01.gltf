@@ -118,9 +118,9 @@
                     0.9671536684036255,
                     0.9753053784370422,
                     1,
-                    0.37727272510528564
+                    0.06818182021379471
                 ],
-                "metallicFactor" : 0.13181817531585693,
+                "metallicFactor" : 0,
                 "roughnessFactor" : 0
             }
         },
@@ -145,10 +145,10 @@
             "doubleSided" : true,
             "extensions" : {
                 "KHR_materials_transmission" : {
-                    "transmissionFactor" : 0.26363635063171387
+                    "transmissionFactor" : 0.718181848526001
                 },
                 "KHR_materials_ior" : {
-                    "ior" : 1.4500000476837158
+                    "ior" : 4.75
                 },
                 "KHR_materials_volume" : {
                     "thicknessFactor" : 0
