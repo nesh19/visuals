@@ -77,7 +77,7 @@
 
     <div id="crash-screen">
         <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
-        <p id="crash-log">Make sure you are running on a Server (GitHub Pages or Live Server).</p>
+        <p id="crash-log">Check your models folder. Are filenames case-sensitive?</p>
     </div>
 
     <div id="image-modal" onclick="this.style.display='none'">
@@ -112,7 +112,7 @@
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-            // Sandbox ACES Tone Mapping for natural PBR highlights
+            // ACES Tone Mapping for PBR
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
             scene.imageProcessingConfiguration.exposure = 1.0;
@@ -122,18 +122,20 @@
             camera.wheelPrecision = 50;
             camera.minZ = 0.1;
 
-            // Pure IBL lighting
+            // Environment lighting
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
             scene.environmentIntensity = 1.0;
 
-            // Red Stress Light (starts at 0)
+            // Red Stress Light
             const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
             stressLight.position = new BABYLON.Vector3(20, 40, 20);
             stressLight.diffuse = new BABYLON.Color3(1.0, 0.0, 0.0); 
             stressLight.intensity = 0.0; 
 
+            // Inspector/Explorer removed as requested
+
             try {
-                // Load model using your relative path
+                // IMPORTANT: Ensure this path and filename match your GitHub repository exactly
                 await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.gltf", scene);
                 
                 if (scene.meshes.length > 0) {
@@ -144,7 +146,7 @@
                     scene.animationGroups.forEach(anim => anim.play(true));
                 }
 
-                // Stats calc
+                // Stats calculation
                 let totalTris = 0;
                 let totalVerts = 0;
                 scene.meshes.forEach(m => {
@@ -155,16 +157,15 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                // Fetch .bin size for UI
                 fetch("./models/human_stress_v01.bin")
                     .then(res => res.blob())
                     .then(blob => document.getElementById("fileSize").innerText = (blob.size / (1024 * 1024)).toFixed(2) + " MB")
                     .catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
-                // Find Vagus Material
+                // Vagus Material setup
                 let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
 
-                // Updated Gallery using your 512px previews
+                // Texture Gallery using 512px preview maps
                 const gallery = document.getElementById("tex-gallery");
                 const textureFiles = [
                     { file: "body_baseColor_512.jpg", label: "Base Color" },
@@ -206,26 +207,26 @@
                     
                     const stressLevel = parseFloat(slider.value);
 
-                    // Red Light intensity
+                    // Stress Light intensity fades in with slider
                     stressLight.intensity = stressLevel * 0.5;
 
-                    // Animation speed scales from 1x up to 4x
+                    // Fasten animations based on slider
                     if (scene.animationGroups) {
                         const speed = 1.0 + (stressLevel * 3.0); 
                         scene.animationGroups.forEach(anim => anim.speedRatio = speed);
                     }
 
-                    // Vagus Emissive Logic: triggers immediately when slider > 0
+                    // Vagus Material: Changes color immediately when slider moves
                     if (vagusMat) {
                         if (stressLevel > 0) {
                             const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
                             const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
                             
-                            // Lerp color and increase intensity
+                            // Color lerp starts at 0 now
                             vagusMat.emissiveColor = BABYLON.Color3.Lerp(calmColor, peakColor, stressLevel);
                             vagusMat.emissiveIntensity = 2.0 + (stressLevel * 15.0); 
                         } else {
-                            // Turn off emissive entirely when slider is at 0
+                            // Turn off emissive entirely at 0 stress
                             vagusMat.emissiveIntensity = 0;
                         }
                     }
