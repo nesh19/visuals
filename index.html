@@ -8,12 +8,10 @@
     <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
     
     <style>
-        /* THE VIGNETTE GRADIANT (Light Cool-Gray to Edge Dark) - Matches Reference image_8.png */
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
             background: radial-gradient(circle, #BBBBBB 0%, #555555 100%); 
         }
-        
         babylon { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 1; }
         
         #ui-panel { 
@@ -23,21 +21,24 @@
         }
         input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; accent-color: #ff4d4d; }
 
+        #left-container {
+            position: absolute; top: 20px; left: 20px; z-index: 100;
+            display: flex; flex-direction: column; gap: 15px; pointer-events: none;
+        }
+
         #stats-panel { 
-            position: absolute; top: 20px; left: 20px; background: rgba(0,0,0,0.8); 
-            padding: 15px; border-radius: 8px; border-left: 3px solid #00ff00; 
-            font-size: 12px; z-index: 100; pointer-events: none; line-height: 1.5;
+            background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border-left: 3px solid #00ff00; 
+            font-size: 12px; line-height: 1.5; pointer-events: auto;
         }
         .stat-val { color: #00ff00; font-weight: bold; }
 
         #tex-gallery { 
-            position: absolute; bottom: 20px; right: 20px; display: flex; gap: 8px; 
-            background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; z-index: 100;
+            display: flex; gap: 8px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; 
+            flex-wrap: wrap; max-width: 250px; pointer-events: auto;
         }
         .tex-box { 
             width: 55px; height: 55px; border: 1px solid #444; background-color: #1a1a1a; 
             border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center;
-            /* Restoring image preview styles */
             background-size: cover; background-position: center;
         }
         .tex-label {
@@ -49,21 +50,23 @@
 </head>
 <body>
 
-    <div id="stats-panel">
-        <strong>STATISTICS</strong><br>
-        FPS: <span id="fps" class="stat-val">0</span><br>
-        Draw Calls: <span id="drawCalls" class="stat-val">0</span><br>
-        Total Tris: <span id="tris" class="stat-val">0</span><br>
-        Total Verts: <span id="verts" class="stat-val">0</span><br>
-        File Size: <span id="fileSize" class="stat-val">Loading...</span>
+    <div id="left-container">
+        <div id="stats-panel">
+            <strong>STATISTICS</strong><br>
+            FPS: <span id="fps" class="stat-val">0</span><br>
+            Draw Calls: <span id="drawCalls" class="stat-val">0</span><br>
+            Total Tris: <span id="tris" class="stat-val">0</span><br>
+            Total Verts: <span id="verts" class="stat-val">0</span><br>
+            File Size: <span id="fileSize" class="stat-val">Loading...</span>
+        </div>
+        
+        <div id="tex-gallery"></div>
     </div>
 
     <div id="ui-panel">
         <strong style="letter-spacing: 1px; color:#aaa;">CORTISOL / STRESS</strong>
         <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
     </div>
-
-    <div id="tex-gallery"></div>
 
     <babylon id="myViewer" model="./models/human_stress_v01.gltf" extends="minimal"></babylon>
 
@@ -87,13 +90,11 @@
                 const slider = document.getElementById("stressSlider");
                 const vagusMat = scene.materials.find(m => m.name.toLowerCase().includes("vagus_glow"));
 
-                // Dynamic File Size (Fetch request is just for the .gltf file) fetch URL update needed
                 fetch("./models/human_stress_v01.gltf").then(response => {
                     const size = response.headers.get("content-length");
                     if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
                 }).catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
-                // Total Geometry (Calculated safely)
                 let totalTris = 0;
                 let totalVerts = 0;
                 scene.meshes.forEach(m => {
@@ -104,32 +105,30 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                // EXACT TEXTURE TARGETING: mat_organs
+                // --- DIRECT TEXTURE INJECTION ---
                 const gallery = document.getElementById("tex-gallery");
-                const organMat = scene.materials.find(m => m.name.toLowerCase().includes("organ"));
                 
-                if (organMat) {
-                    const textures = organMat.getActiveTextures();
-                    textures.forEach((t, index) => {
-                        let box = document.createElement("div");
-                        box.className = "tex-box";
-                        
-                        // FIX 2: RestoringPreviews. With separated files, t.url is a real PNG/JPG file path the browser can load.
-                        const texUrl = t.url || t.name;
-                        box.style.backgroundImage = `url('${texUrl}')`;
-                        
-                        let label = document.createElement("div");
-                        label.className = "tex-label";
-                        
-                        // Cleanup the filename for the UI
-                        let tName = t.name.split('/').pop();
-                        // This removes the blob checks. With separate files, they will have names.
-                        label.innerText = tName.substring(0, 10);
-                        
-                        box.appendChild(label);
-                        gallery.appendChild(box);
-                    });
-                }
+                // Hardcoding the exact maps from your models folder
+                const textureFiles = [
+                    { file: "body_baseColor.jpg", label: "Base Color" },
+                    { file: "body_normal.jpg", label: "Normal" },
+                    { file: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
+                ];
+
+                textureFiles.forEach(tex => {
+                    let box = document.createElement("div");
+                    box.className = "tex-box";
+                    
+                    // Pointing directly to the models folder
+                    box.style.backgroundImage = `url('./models/${tex.file}')`;
+                    
+                    let label = document.createElement("div");
+                    label.className = "tex-label";
+                    label.innerText = tex.label;
+                    
+                    box.appendChild(label);
+                    gallery.appendChild(box);
+                });
 
                 scene.animationGroups.forEach(anim => anim.play(true));
 
@@ -140,14 +139,14 @@
                     document.getElementById("fps").innerText = engine.getFps().toFixed();
                     document.getElementById("drawCalls").innerText = instrumentation.drawCallsCounter.current;
                     
-                    // Stress Color Logic
                     const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
                     const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
                     const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, stressLevel);
 
+                    const lightStress = stressLevel * 0.3; 
                     if (mainLight) {
-                        mainLight.intensity = 1.0 - (stressLevel * 0.7); 
-                        mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - stressLevel, 1.0 - stressLevel); 
+                        mainLight.intensity = 1.0 - (lightStress * 0.7); 
+                        mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
                     }
 
                     const speed = 1.0 + (stressLevel * 3.0); 
