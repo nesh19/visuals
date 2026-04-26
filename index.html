@@ -13,7 +13,6 @@
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
             background: radial-gradient(circle, #BBBBBB 0%, #555555 100%); 
         }
-        /* Replaced <babylon> with standard canvas */
         #renderCanvas { width: 100%; height: 100%; touch-action: none; display: block; z-index: 1; position: absolute; }
         
         #ui-panel { 
@@ -114,37 +113,40 @@
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-            // 1. Setup Camera (Sandbox Default)
+            // --- THE SANDBOX SECRET: TONE MAPPING ---
+            // This prevents the HDR lights from blowing out into pure white
+            scene.imageProcessingConfiguration.toneMappingEnabled = true;
+            scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+            scene.imageProcessingConfiguration.exposure = 1.0;
+
             const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 3, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
             camera.wheelPrecision = 50;
             camera.minZ = 0.1;
 
-            // 2. Setup Light
             const mainLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-1, -2, -1), scene);
             mainLight.position = new BABYLON.Vector3(20, 40, 20);
-            mainLight.intensity = 0.5;
+            mainLight.intensity = 1.0; // Restored to normal since Tone Mapping is on
 
-            // 3. Setup IBL Studio Environment
-            scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-            scene.environmentIntensity = 1.5;
+            // Use the Default Environment helper to perfectly map the studio lighting without a skybox
+            const envHelper = scene.createDefaultEnvironment({
+                createSkybox: false, 
+                createGround: false,
+                environmentTexture: "https://assets.babylonjs.com/environments/studio.env"
+            });
+            scene.environmentIntensity = 1.0;
 
-            // 4. Show Inspector immediately
             scene.debugLayer.show({ globalRoot: document.body });
 
-            // 5. THE PURE SCENELOADER (Exactly how the Sandbox does it)
             try {
                 const result = await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.gltf", scene);
                 
-                // Frame the camera to look at the model perfectly
                 camera.setTarget(scene.meshes[0]);
 
-                // Play Animations
                 if (scene.animationGroups && scene.animationGroups.length > 0) {
                     scene.animationGroups.forEach(anim => anim.play(true));
                 }
 
-                // Calculate Stats
                 let totalTris = 0;
                 let totalVerts = 0;
                 scene.meshes.forEach(m => {
@@ -155,13 +157,11 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                // Fetch File Size
                 fetch("./models/human_stress_v01.bin")
                     .then(res => res.blob())
                     .then(blob => document.getElementById("fileSize").innerText = (blob.size / (1024 * 1024)).toFixed(2) + " MB")
                     .catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
-                // Setup Materials and AO
                 let vagusMat = null;
                 scene.materials.forEach(mat => {
                     if (mat instanceof BABYLON.PBRMaterial) {
@@ -170,16 +170,16 @@
                         if (matName.includes("vagus")) vagusMat = mat;
 
                         if (!matName.includes("vagus") && !matName.includes("glass")) {
-                            // Because we are using the pure loader, the paths are fully intact. 
-                            // We just ensure the engine respects the R channel for AO.
+                            // Turn on the loaded ORM map's red channel for AO
                             mat.useAmbientOcclusionFromMetallicTextureRed = true;
+                            // Boost the intensity
                             mat.ambientTextureStrength = 6.0; 
+                            // Force shadows over analytical lights
                             mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
                         }
                     }
                 });
 
-                // Build Texture Gallery
                 const gallery = document.getElementById("tex-gallery");
                 if (gallery.children.length === 0) {
                     const textureFiles = [
@@ -205,7 +205,6 @@
                     });
                 }
 
-                // Topology Toggle
                 const wireframeBtn = document.getElementById("wireframe-btn");
                 let isWireframe = false;
                 wireframeBtn.addEventListener("click", () => {
@@ -215,7 +214,6 @@
                     scene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
                 });
 
-                // Render Loop (Where the real-time slider updates happen)
                 const slider = document.getElementById("stressSlider");
                 const fpsElem = document.getElementById("fps");
 
@@ -231,7 +229,8 @@
                     const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, colorLerpFactor);
 
                     const lightStress = stressLevel * 0.3; 
-                    mainLight.intensity = 0.5 - (lightStress * 0.8); 
+                    // Lower the direct light intensity dynamically as stress rises
+                    mainLight.intensity = 1.0 - (lightStress * 0.8); 
                     mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
 
                     if (scene.animationGroups) {
@@ -253,14 +252,12 @@
             return scene;
         };
 
-        // Initialize Engine
         createScene().then(scene => {
             engine.runRenderLoop(() => {
                 scene.render();
             });
         });
 
-        // Handle Window Resize
         window.addEventListener("resize", function () {
             engine.resize();
         });
