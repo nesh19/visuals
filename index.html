@@ -5,7 +5,7 @@
     <title>Technical Artist Portfolio | nesh19</title>
     
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
-    <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <script src="https://cdn.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
     
     <style>
@@ -13,14 +13,13 @@
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
             background: radial-gradient(circle, #BBBBBB 0%, #555555 100%); 
         }
-        babylon { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 1; }
+        /* Replaced <babylon> with standard canvas */
+        #renderCanvas { width: 100%; height: 100%; touch-action: none; display: block; z-index: 1; position: absolute; }
         
         #ui-panel { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
             background: rgba(15, 15, 15, 0.85); padding: 20px; border-radius: 10px; 
-            border: 1px solid #444; width: 300px; text-align: center; 
-            z-index: 5; /* FIXED Z-INDEX */
-            backdrop-filter: blur(5px);
+            border: 1px solid #444; width: 300px; text-align: center; z-index: 5; backdrop-filter: blur(5px);
         }
         input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; accent-color: #ff4d4d; }
 
@@ -33,8 +32,7 @@
         #wireframe-btn:hover { background: #444; color: #fff; border-color: #888; }
 
         #left-container {
-            position: absolute; top: 20px; left: 20px; 
-            z-index: 5; /* FIXED Z-INDEX */
+            position: absolute; top: 20px; left: 20px; z-index: 5;
             display: flex; flex-direction: column; gap: 15px; pointer-events: none;
         }
 
@@ -81,7 +79,7 @@
 
     <div id="crash-screen">
         <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
-        <p id="crash-log">Check your GitHub folder. Is the .bin file missing?</p>
+        <p id="crash-log">Check your GitHub folder. Is the file missing?</p>
     </div>
 
     <div id="image-modal" onclick="this.style.display='none'">
@@ -106,172 +104,165 @@
         <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
     </div>
 
-    <babylon id="myViewer" model="./models/human_stress_v01.gltf" extends="minimal"></babylon>
+    <canvas id="renderCanvas"></canvas>
 
     <script>
-        BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
-            
-            const wireframeBtn = document.getElementById("wireframe-btn");
-            let isWireframe = false;
-            wireframeBtn.addEventListener("click", () => {
-                isWireframe = !isWireframe;
-                wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
-                wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
+        const canvas = document.getElementById("renderCanvas");
+        const engine = new BABYLON.Engine(canvas, true);
+
+        const createScene = async function () {
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+
+            // 1. Setup Camera (Sandbox Default)
+            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 3, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            camera.wheelPrecision = 50;
+            camera.minZ = 0.1;
+
+            // 2. Setup Light
+            const mainLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-1, -2, -1), scene);
+            mainLight.position = new BABYLON.Vector3(20, 40, 20);
+            mainLight.intensity = 0.5;
+
+            // 3. Setup IBL Studio Environment
+            scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
+            scene.environmentIntensity = 1.5;
+
+            // 4. Show Inspector immediately
+            scene.debugLayer.show({ globalRoot: document.body });
+
+            // 5. THE PURE SCENELOADER (Exactly how the Sandbox does it)
+            try {
+                const result = await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.gltf", scene);
                 
-                if (viewer.sceneManager && viewer.sceneManager.scene) {
-                    viewer.sceneManager.scene.materials.forEach(mat => {
-                        if (mat) mat.wireframe = isWireframe;
-                    });
+                // Frame the camera to look at the model perfectly
+                camera.setTarget(scene.meshes[0]);
+
+                // Play Animations
+                if (scene.animationGroups && scene.animationGroups.length > 0) {
+                    scene.animationGroups.forEach(anim => anim.play(true));
                 }
-            });
 
-            viewer.onSceneInitObservable.add(function(scene) {
-                scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
-                scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-                scene.environmentIntensity = 1.5; 
+                // Calculate Stats
+                let totalTris = 0;
+                let totalVerts = 0;
+                scene.meshes.forEach(m => {
+                    totalVerts += m.getTotalVertices() || 0;
+                    const indices = m.getIndices();
+                    if (indices) totalTris += (indices.length / 3);
+                });
+                document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
+                document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                const engine = viewer.engine;
-                const slider = document.getElementById("stressSlider");
-                const fpsElem = document.getElementById("fps");
-                const trisElem = document.getElementById("tris");
-                const vertsElem = document.getElementById("verts");
-                const gallery = document.getElementById("tex-gallery");
+                // Fetch File Size
+                fetch("./models/human_stress_v01.bin")
+                    .then(res => res.blob())
+                    .then(blob => document.getElementById("fileSize").innerText = (blob.size / (1024 * 1024)).toFixed(2) + " MB")
+                    .catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
-                let isInitialized = false;
+                // Setup Materials and AO
                 let vagusMat = null;
-
-                scene.onBeforeRenderObservable.add(() => {
-                    
-                    if (!isInitialized && scene.meshes.length > 1 && scene.materials.length > 0) {
+                scene.materials.forEach(mat => {
+                    if (mat instanceof BABYLON.PBRMaterial) {
+                        const matName = mat.name ? mat.name.toLowerCase() : "";
                         
-                        // Launch Inspector on the Global Root so it doesn't vanish!
-                        scene.debugLayer.show({ globalRoot: document.body });
+                        if (matName.includes("vagus")) vagusMat = mat;
 
-                        const mainLight = scene.lights[0];
-                        if (mainLight) {
-                            mainLight.intensity = 0.5; 
-                        }
-
-                        // --- THE MANUAL INJECTION (NO-FLIP) ---
-                        // Parameter 4 is 'invertY'. We set it to FALSE so it matches the glTF geometry perfectly.
-                        const manualOrm = new BABYLON.Texture("./models/body_occlusionRoughnessMetallic.jpg", scene, false, false);
-                        manualOrm.coordinatesIndex = 0; // Force UV0
-
-                        scene.materials.forEach(mat => {
-                            if (mat instanceof BABYLON.PBRMaterial) {
-                                const matName = mat.name ? mat.name.toLowerCase() : "";
-                                
-                                // Target specifically the body/organs
-                                if (!matName.includes("vagus") && !matName.includes("glass")) {
-                                    
-                                    // Overwrite the empty slots with our manually loaded texture
-                                    mat.metallicTexture = manualOrm;
-                                    mat.ambientTexture = manualOrm;
-
-                                    // Force correct channel reading
-                                    mat.useAmbientOcclusionFromMetallicTextureRed = true;
-                                    mat.useRoughnessFromMetallicTextureGreen = true;
-                                    mat.useMetallnessFromMetallicTextureBlue = true;
-                                    
-                                    // Boost shadows
-                                    mat.ambientTextureStrength = 6.0; 
-                                    mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
-                                }
-                            }
-                        });
-
-                        vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus_glow"));
-
-                        if (scene.animationGroups && scene.animationGroups.length > 0) {
-                            scene.animationGroups.forEach(anim => anim.play(true));
-                        }
-
-                        let totalTris = 0;
-                        let totalVerts = 0;
-                        scene.meshes.forEach(m => {
-                            totalVerts += m.getTotalVertices() || 0;
-                            const indices = m.getIndices();
-                            if (indices) totalTris += (indices.length / 3);
-                        });
-                        trisElem.innerText = Math.round(totalTris).toLocaleString();
-                        vertsElem.innerText = totalVerts.toLocaleString();
-
-                        fetch("./models/human_stress_v01.bin")
-                            .then(response => response.blob())
-                            .then(blob => {
-                                document.getElementById("fileSize").innerText = (blob.size / (1024 * 1024)).toFixed(2) + " MB";
-                            })
-                            .catch(() => document.getElementById("fileSize").innerText = "Unknown");
-
-                        if (gallery.children.length === 0) {
-                            const textureFiles = [
-                                { file: "body_baseColor.jpg", label: "Base Color" },
-                                { file: "body_normal.jpg", label: "Normal" },
-                                { file: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
-                            ];
-
-                            textureFiles.forEach(tex => {
-                                let box = document.createElement("div");
-                                box.className = "tex-box";
-                                const fullPath = `./models/${tex.file}`;
-                                box.style.backgroundImage = `url('${fullPath}')`;
-                                
-                                box.onclick = function() {
-                                    document.getElementById('modal-img').src = fullPath;
-                                    document.getElementById('image-modal').style.display = 'flex';
-                                };
-                                
-                                let label = document.createElement("div");
-                                label.className = "tex-label";
-                                label.innerText = tex.label;
-                                
-                                box.appendChild(label);
-                                gallery.appendChild(box);
-                            });
-                        }
-
-                        isInitialized = true;
-                    }
-
-                    if (isInitialized) {
-                        const stressLevel = parseFloat(slider.value);
-                        
-                        let currentFps = engine.getFps();
-                        fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
-                        
-                        let colorLerpFactor = 0;
-                        if (stressLevel > 0.33) {
-                            colorLerpFactor = (stressLevel - 0.33) / 0.67;
-                        }
-
-                        const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
-                        const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
-                        const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, colorLerpFactor);
-
-                        const mainLight = scene.lights[0];
-                        if (mainLight && mainLight.diffuse) {
-                            const lightStress = stressLevel * 0.3; 
-                            mainLight.intensity = 0.5 - (lightStress * 0.8); 
-                            mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
-                        }
-
-                        if (scene.animationGroups) {
-                            const speed = 1.0 + (stressLevel * 3.0); 
-                            scene.animationGroups.forEach(anim => anim.speedRatio = speed);
-                        }
-
-                        if (vagusMat) {
-                            vagusMat.emissiveColor = currentColor;
-                            vagusMat.emissiveIntensity = 2.0 + (colorLerpFactor * 15.0); 
+                        if (!matName.includes("vagus") && !matName.includes("glass")) {
+                            // Because we are using the pure loader, the paths are fully intact. 
+                            // We just ensure the engine respects the R channel for AO.
+                            mat.useAmbientOcclusionFromMetallicTextureRed = true;
+                            mat.ambientTextureStrength = 6.0; 
+                            mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
                         }
                     }
                 });
-            });
-            
-            viewer.onModelErrorObservable.add(function(error) {
+
+                // Build Texture Gallery
+                const gallery = document.getElementById("tex-gallery");
+                if (gallery.children.length === 0) {
+                    const textureFiles = [
+                        { file: "body_baseColor.jpg", label: "Base Color" },
+                        { file: "body_normal.jpg", label: "Normal" },
+                        { file: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
+                    ];
+
+                    textureFiles.forEach(tex => {
+                        let box = document.createElement("div");
+                        box.className = "tex-box";
+                        const fullPath = `./models/${tex.file}`;
+                        box.style.backgroundImage = `url('${fullPath}')`;
+                        box.onclick = () => {
+                            document.getElementById('modal-img').src = fullPath;
+                            document.getElementById('image-modal').style.display = 'flex';
+                        };
+                        let label = document.createElement("div");
+                        label.className = "tex-label";
+                        label.innerText = tex.label;
+                        box.appendChild(label);
+                        gallery.appendChild(box);
+                    });
+                }
+
+                // Topology Toggle
+                const wireframeBtn = document.getElementById("wireframe-btn");
+                let isWireframe = false;
+                wireframeBtn.addEventListener("click", () => {
+                    isWireframe = !isWireframe;
+                    wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
+                    wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
+                    scene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
+                });
+
+                // Render Loop (Where the real-time slider updates happen)
+                const slider = document.getElementById("stressSlider");
+                const fpsElem = document.getElementById("fps");
+
+                scene.onBeforeRenderObservable.add(() => {
+                    let currentFps = engine.getFps();
+                    fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
+                    
+                    const stressLevel = parseFloat(slider.value);
+                    let colorLerpFactor = stressLevel > 0.33 ? (stressLevel - 0.33) / 0.67 : 0;
+
+                    const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
+                    const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
+                    const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, colorLerpFactor);
+
+                    const lightStress = stressLevel * 0.3; 
+                    mainLight.intensity = 0.5 - (lightStress * 0.8); 
+                    mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
+
+                    if (scene.animationGroups) {
+                        const speed = 1.0 + (stressLevel * 3.0); 
+                        scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+                    }
+
+                    if (vagusMat) {
+                        vagusMat.emissiveColor = currentColor;
+                        vagusMat.emissiveIntensity = 2.0 + (colorLerpFactor * 15.0); 
+                    }
+                });
+
+            } catch (error) {
                 document.getElementById('crash-screen').style.display = 'block';
                 console.error("LOAD ERROR:", error);
+            }
+
+            return scene;
+        };
+
+        // Initialize Engine
+        createScene().then(scene => {
+            engine.runRenderLoop(() => {
+                scene.render();
             });
+        });
+
+        // Handle Window Resize
+        window.addEventListener("resize", function () {
+            engine.resize();
         });
     </script>
 </body>
