@@ -116,9 +116,7 @@
                 
                 if (viewer.sceneManager && viewer.sceneManager.scene) {
                     viewer.sceneManager.scene.materials.forEach(mat => {
-                        if (mat) {
-                            mat.wireframe = isWireframe;
-                        }
+                        if (mat) mat.wireframe = isWireframe;
                     });
                 }
             });
@@ -126,8 +124,6 @@
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
                 
-                // --- FIX 1: ADD IBL ENVIRONMENT TEXTURE FOR AO ---
-                // This mimics the Sandbox environment, allowing PBR materials to calculate shadows
                 scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/environment.env", scene);
                 scene.environmentIntensity = 1.0; 
 
@@ -145,12 +141,26 @@
                     
                     if (!isInitialized && scene.meshes.length > 1 && scene.materials.length > 0) {
                         
+                        // --- FIX 1: LOWER INITIAL LIGHT INTENSITY ---
+                        const mainLight = scene.lights[0];
+                        if (mainLight) {
+                            mainLight.intensity = 0.5; // Lowered from 1.0 so AO isn't washed out
+                        }
+
+                        // --- FIX 2: FORCE CONNECT AO MAP ---
                         scene.materials.forEach(mat => {
                             if (mat instanceof BABYLON.PBRMaterial) {
-                                if (mat.metallicTexture) {
+                                
+                                // If the ORM is loaded, but Ambient is missing, manually copy the reference over!
+                                if (mat.metallicTexture && !mat.ambientTexture) {
+                                    mat.ambientTexture = mat.metallicTexture;
                                     mat.useAmbientOcclusionFromMetallicTextureRed = true;
-                                    mat.ambientTextureStrength = 3.0; 
-                                    mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
+                                }
+
+                                // Now that we guarantee the Ambient texture exists, boost its shadow power
+                                if (mat.ambientTexture) {
+                                    mat.ambientTextureStrength = 3.0; // Pushes the contrast
+                                    mat.ambientTextureImpactOnAnalyticalLights = 1.0; // Forces shadows over direct light
                                 }
                             }
                         });
@@ -213,12 +223,8 @@
                         const stressLevel = parseFloat(slider.value);
                         fpsElem.innerText = engine.getFps().toFixed();
                         
-                        // --- FIX 2: DELAYED VAGUS GLOW MATH ---
                         let colorLerpFactor = 0;
-                        
-                        // If slider is past 33%, start transitioning the color. Otherwise, stay at 0 (Calm Blue)
                         if (stressLevel > 0.33) {
-                            // This math remaps the 0.33 -> 1.0 range into a clean 0.0 -> 1.0 range
                             colorLerpFactor = (stressLevel - 0.33) / 0.67;
                         }
 
@@ -229,11 +235,11 @@
                         const mainLight = scene.lights[0];
                         if (mainLight && mainLight.diffuse) {
                             const lightStress = stressLevel * 0.3; 
-                            mainLight.intensity = 1.0 - (lightStress * 0.7); 
+                            // Since base is now 0.5, we scale down to roughly 0.2 at max stress
+                            mainLight.intensity = 0.5 - (lightStress * 0.8); 
                             mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
                         }
 
-                        // Animation speed still scales with the whole slider
                         if (scene.animationGroups) {
                             const speed = 1.0 + (stressLevel * 3.0); 
                             scene.animationGroups.forEach(anim => anim.speedRatio = speed);
@@ -241,7 +247,6 @@
 
                         if (vagusMat) {
                             vagusMat.emissiveColor = currentColor;
-                            // Intensity scales with the delayed math too, so it doesn't get crazy bright until it turns red
                             vagusMat.emissiveIntensity = 2.0 + (colorLerpFactor * 15.0); 
                         }
                     }
