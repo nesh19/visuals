@@ -11,7 +11,7 @@
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
-            /* Pro-grade Slate Gray background */
+            /* Pro-grade Dark Slate background */
             background: radial-gradient(circle, #222222 0%, #050505 100%); 
             touch-action: none; 
         }
@@ -149,19 +149,18 @@
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-            // ACES Tone Mapping
+            // Setup ACES Tone Mapping
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
             scene.imageProcessingConfiguration.exposure = 1.1; 
 
+            // --- CAMERA & CLIPPING FIXES ---
             const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 6, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
-            
-            // --- SAFE SOFT ZOOM ---
             camera.wheelPrecision = 150; 
             camera.inertia = 0.9; 
-            camera.minZ = 0.01; // Prevents "slicing" geometry when close
-            camera.lowerRadiusLimit = 4.2; // Stops camera before it enters the body
+            camera.minZ = 0.01; // Fixes "slicing" geometry
+            camera.lowerRadiusLimit = 4.2; // Prevents camera from entering body
             camera.upperRadiusLimit = 15.0;
 
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
@@ -196,7 +195,7 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                // Smart total file size (HEAD request)
+                // --- TOTAL FILE SIZE (HEAD REQUEST) ---
                 const filesToSize = [
                     "./models/human_stress_v01.bin",
                     "./models/body_baseColor.jpg",
@@ -210,4 +209,132 @@
                         .catch(() => 0)
                 )).then(sizes => {
                     const totalBytes = sizes.reduce((a, b) => a + b, 0);
-                    if
+                    if (totalBytes > 0) {
+                        document.getElementById("fileSize").innerText = (totalBytes / (1024 * 1024)).toFixed(2) + " MB";
+                    } else {
+                        document.getElementById("fileSize").innerText = "Ready";
+                    }
+                });
+
+                // Capture native Vagus Emissive
+                let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
+                let originalVagusColor = new BABYLON.Color3(0.1, 0.3, 1.0);
+                let originalVagusIntensity = 2.0;
+                
+                if (vagusMat && vagusMat.emissiveColor) {
+                    originalVagusColor = vagusMat.emissiveColor.clone();
+                    originalVagusIntensity = vagusMat.emissiveIntensity || 2.0;
+                }
+
+                // Build Texture Gallery
+                const gallery = document.getElementById("tex-gallery");
+                if (gallery.children.length === 0) {
+                    const textureFiles = [
+                        { file: "body_baseColor_512.jpg", full: "body_baseColor.jpg", label: "Base Color" },
+                        { file: "body_normal_512.jpg", full: "body_normal.jpg", label: "Normal" },
+                        { file: "body_occlusionRoughnessMetallic_512.jpg", full: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
+                    ];
+
+                    textureFiles.forEach(tex => {
+                        let box = document.createElement("div");
+                        box.className = "tex-box";
+                        const thumbPath = `./models/${tex.file}`;
+                        const fullPath = `./models/${tex.full}`;
+                        
+                        box.style.backgroundImage = `url('${thumbPath}')`;
+                        box.onclick = () => {
+                            document.getElementById('modal-img').src = fullPath; 
+                            document.getElementById('image-modal').style.display = 'flex';
+                        };
+                        let label = document.createElement("div");
+                        label.className = "tex-label";
+                        label.innerText = tex.label;
+                        box.appendChild(label);
+                        gallery.appendChild(box);
+                    });
+                }
+
+                const wireframeBtn = document.getElementById("wireframe-btn");
+                let isWireframe = false;
+                wireframeBtn.addEventListener("click", () => {
+                    isWireframe = !isWireframe;
+                    wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
+                    wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
+                    scene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
+                });
+
+                // UI Controls
+                const stressSlider = document.getElementById("stressSlider");
+                const iblSlider = document.getElementById("iblSlider");
+                const expSlider = document.getElementById("expSlider");
+                const tonemapSelect = document.getElementById("tonemapSelect");
+                const iblVal = document.getElementById("iblVal");
+                const expVal = document.getElementById("expVal");
+
+                tonemapSelect.addEventListener("change", (e) => {
+                    if (e.target.value === "aces") {
+                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
+                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+                    } else if (e.target.value === "standard") {
+                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
+                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
+                    } else {
+                        scene.imageProcessingConfiguration.toneMappingEnabled = false;
+                    }
+                });
+
+                iblSlider.addEventListener("input", () => {
+                    const val = parseFloat(iblSlider.value);
+                    scene.environmentIntensity = val;
+                    iblVal.innerText = val.toFixed(1);
+                });
+
+                expSlider.addEventListener("input", () => {
+                    const val = parseFloat(expSlider.value);
+                    scene.imageProcessingConfiguration.exposure = val;
+                    expVal.innerText = val.toFixed(1);
+                });
+
+                const fpsElem = document.getElementById("fps");
+
+                scene.onBeforeRenderObservable.add(() => {
+                    let currentFps = engine.getFps();
+                    fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
+                    
+                    const stressLevel = parseFloat(stressSlider.value);
+                    let colorLerpFactor = stressLevel > 0.33 ? (stressLevel - 0.33) / 0.67 : 0;
+                    const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
+                    const currentColor = BABYLON.Color3.Lerp(originalVagusColor, peakColor, colorLerpFactor);
+
+                    stressLight.intensity = stressLevel * 0.5;
+
+                    if (scene.animationGroups) {
+                        const speed = 1.0 + (stressLevel * 3.0); 
+                        scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+                    }
+
+                    if (vagusMat) {
+                        vagusMat.emissiveColor = currentColor;
+                        vagusMat.emissiveIntensity = originalVagusIntensity + (colorLerpFactor * 15.0); 
+                    }
+                });
+
+            } catch (error) {
+                document.getElementById('crash-screen').style.display = 'block';
+                console.error("LOAD ERROR:", error);
+            }
+            return scene;
+        };
+
+        createScene().then(scene => {
+            engine.runRenderLoop(() => {
+                scene.render();
+            });
+        });
+
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
+    </script>
+</body>
+</html>
