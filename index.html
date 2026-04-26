@@ -124,11 +124,8 @@
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
                 
-                var envHelper = scene.createDefaultEnvironment({
-                    createSkybox: false, 
-                    createGround: false,
-                    environmentTexture: "https://assets.babylonjs.com/environments/studio.env"
-                });
+                // NO MORE GIANT SKYBOX. Just pure lighting data applied directly to the scene.
+                scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
                 scene.environmentIntensity = 1.5; 
             });
 
@@ -144,7 +141,6 @@
                 let isInitialized = false;
                 let vagusMat = null;
 
-                // Everything goes back inside the BeforeRender loop to beat the race condition
                 scene.onBeforeRenderObservable.add(() => {
                     
                     if (!isInitialized && scene.meshes.length > 1 && scene.materials.length > 0) {
@@ -154,7 +150,7 @@
                             mainLight.intensity = 0.5; 
                         }
 
-                        // --- NATIVE AO FIX (Restored inside the safe zone) ---
+                        // --- SAFE NATIVE AO PIPELINE ---
                         scene.materials.forEach(mat => {
                             if (mat instanceof BABYLON.PBRMaterial) {
                                 const matName = mat.name ? mat.name.toLowerCase() : "";
@@ -162,16 +158,12 @@
                                 if (!matName.includes("vagus") && !matName.includes("glass")) {
                                     
                                     if (mat.metallicTexture) {
-                                        if (!mat.ambientTexture) {
-                                            mat.ambientTexture = mat.metallicTexture;
-                                        }
+                                        // Force the Ambient slot to read the ORM map
+                                        mat.ambientTexture = mat.metallicTexture;
 
-                                        mat.metallicTexture.coordinatesIndex = 0;
-                                        mat.ambientTexture.coordinatesIndex = 0;
-
+                                        // Pull AO from the R channel and crank the math to 6.0!
                                         mat.useAmbientOcclusionFromMetallicTextureRed = true;
                                         mat.ambientTextureStrength = 6.0; 
-                                        mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
                                     }
                                 }
                             }
@@ -233,7 +225,10 @@
                     // --- REAL-TIME RENDER LOOP ---
                     if (isInitialized) {
                         const stressLevel = parseFloat(slider.value);
-                        fpsElem.innerText = engine.getFps().toFixed();
+                        
+                        // Fallback math so FPS doesn't read "Infinity" if the engine renders too fast
+                        let currentFps = engine.getFps();
+                        fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
                         
                         let colorLerpFactor = 0;
                         if (stressLevel > 0.33) {
@@ -244,6 +239,7 @@
                         const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
                         const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, colorLerpFactor);
 
+                        const mainLight = scene.lights[0];
                         if (mainLight && mainLight.diffuse) {
                             const lightStress = stressLevel * 0.3; 
                             mainLight.intensity = 0.5 - (lightStress * 0.8); 
