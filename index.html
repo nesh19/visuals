@@ -2,25 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Technical Artist Portfolio | nesh19</title>
     
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
-    <script src="https://cdn.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
     
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
             background: radial-gradient(circle, #BBBBBB 0%, #555555 100%); 
+            touch-action: none; /* Prevents pull-to-refresh on mobile */
         }
-        #renderCanvas { width: 100%; height: 100%; touch-action: none; display: block; z-index: 1; position: absolute; }
+        #renderCanvas { width: 100%; height: 100%; display: block; z-index: 1; position: absolute; outline: none; }
         
         #ui-panel { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
             background: rgba(15, 15, 15, 0.85); padding: 20px; border-radius: 10px; 
-            border: 1px solid #444; width: 300px; text-align: center; z-index: 5; backdrop-filter: blur(5px);
+            border: 1px solid #444; width: 320px; text-align: center; z-index: 5; backdrop-filter: blur(5px);
         }
-        input[type=range] { width: 100%; margin-top: 10px; cursor: pointer; accent-color: #ff4d4d; }
+        
+        .slider-group { margin-top: 15px; text-align: left; }
+        .slider-label { font-size: 10px; color: #aaa; letter-spacing: 1px; display: flex; justify-content: space-between; }
+        .slider-val { color: #00ff00; }
+        input[type=range] { width: 100%; margin-top: 5px; cursor: pointer; accent-color: #ff4d4d; }
+        
+        /* Specific coloring for the lighting sliders */
+        #iblSlider { accent-color: #4da6ff; }
+        #expSlider { accent-color: #ffb84d; }
 
         #wireframe-btn {
             width: 100%; margin-top: 15px; padding: 8px; cursor: pointer;
@@ -65,12 +74,22 @@
             cursor: pointer; backdrop-filter: blur(5px); pointer-events: auto;
         }
         #modal-img { max-width: 80vw; max-height: 80vh; border: 2px solid #555; border-radius: 8px; }
-        .modal-hint { margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px; }
         
         #crash-screen {
             display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: rgba(200, 0, 0, 0.9); padding: 30px; border: 2px solid white; z-index: 9999;
             font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
+        }
+
+        /* --- MOBILE RESPONSIVE LAYOUT --- */
+        @media (max-width: 768px) {
+            #ui-panel { width: 85%; bottom: 15px; padding: 15px; }
+            #left-container { top: 10px; left: 10px; flex-direction: row; flex-wrap: wrap; max-width: calc(100% - 20px); justify-content: space-between; }
+            #stats-panel { padding: 10px; font-size: 10px; width: 100%; box-sizing: border-box; }
+            #tex-gallery { max-width: 100%; justify-content: center; width: 100%; }
+            .tex-box { width: 50px; height: 50px; }
+            .tex-label { font-size: 8px; }
+            .slider-group { margin-top: 10px; }
         }
     </style>
 </head>
@@ -83,23 +102,37 @@
 
     <div id="image-modal" onclick="this.style.display='none'">
         <img id="modal-img" src="" alt="Texture Preview">
-        <div class="modal-hint">CLICK ANYWHERE TO CLOSE</div>
+        <div style="margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px;">CLICK ANYWHERE TO CLOSE</div>
     </div>
 
     <div id="left-container">
         <div id="stats-panel">
             <strong>STATISTICS</strong><br>
             FPS: <span id="fps" class="stat-val">0</span><br>
-            Total Tris: <span id="tris" class="stat-val">0</span><br>
-            Total Verts: <span id="verts" class="stat-val">0</span><br>
-            Geometry Size: <span id="fileSize" class="stat-val">Calculating...</span>
+            Tris: <span id="tris" class="stat-val">0</span> | Verts: <span id="verts" class="stat-val">0</span><br>
+            Size: <span id="fileSize" class="stat-val">Calculating...</span>
         </div>
         <div id="tex-gallery"></div>
     </div>
 
     <div id="ui-panel">
-        <strong style="letter-spacing: 1px; color:#aaa;">CORTISOL / STRESS</strong>
-        <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+        <div class="slider-group">
+            <div class="slider-label"><span>CORTISOL / STRESS</span></div>
+            <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+        </div>
+
+        <div style="display: flex; gap: 15px;">
+            <div class="slider-group" style="flex: 1;">
+                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.5</span></div>
+                <input type="range" id="iblSlider" min="0" max="3" step="0.1" value="1.5">
+            </div>
+            
+            <div class="slider-group" style="flex: 1;">
+                <div class="slider-label"><span>EXPOSURE</span> <span id="expVal" class="slider-val">1.2</span></div>
+                <input type="range" id="expSlider" min="0.1" max="4" step="0.1" value="1.2">
+            </div>
+        </div>
+
         <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
     </div>
 
@@ -113,30 +146,32 @@
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-            // Sandbox ACES Tone Mapping
+            // Setup Tone Mapping & Exposure
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-            scene.imageProcessingConfiguration.exposure = 1.0;
+            scene.imageProcessingConfiguration.exposure = 1.2; // Boosted baseline exposure
 
             const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 3, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
             camera.wheelPrecision = 50;
             camera.minZ = 0.1;
+            // Prevent camera from zooming into the mesh or flying too far away on mobile
+            camera.lowerRadiusLimit = 1.0; 
+            camera.upperRadiusLimit = 10.0;
 
-            // Pure IBL lighting (Just like Sandbox)
+            // Pure IBL lighting - increased baseline to brighten the scene
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-            scene.environmentIntensity = 1.0;
+            scene.environmentIntensity = 1.5;
 
-            // Stress Tint Light (Starts at 0 intensity, pure red)
+            // Stress Tint Light
             const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
             stressLight.position = new BABYLON.Vector3(20, 40, 20);
             stressLight.diffuse = new BABYLON.Color3(1.0, 0.0, 0.0); 
             stressLight.intensity = 0.0; 
 
-            scene.debugLayer.show({ globalRoot: document.body });
+            // DEBUGGER REMOVED!
 
             try {
-                // The pure glTF loader handles ORM packing automatically!
                 await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.gltf", scene);
                 
                 camera.setTarget(scene.meshes[0]);
@@ -160,7 +195,6 @@
                     .then(blob => document.getElementById("fileSize").innerText = (blob.size / (1024 * 1024)).toFixed(2) + " MB")
                     .catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
-                // Get vagus mat for glowing. NO MANUAL MATERIAL HACKS HERE!
                 let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
 
                 const gallery = document.getElementById("tex-gallery");
@@ -197,21 +231,41 @@
                     scene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
                 });
 
-                const slider = document.getElementById("stressSlider");
+                // --- UI EVENT LISTENERS FOR LIGHTING ---
+                const stressSlider = document.getElementById("stressSlider");
+                const iblSlider = document.getElementById("iblSlider");
+                const expSlider = document.getElementById("expSlider");
+                
+                const iblVal = document.getElementById("iblVal");
+                const expVal = document.getElementById("expVal");
+
+                // Update Environment Light Intensity dynamically
+                iblSlider.addEventListener("input", () => {
+                    const val = parseFloat(iblSlider.value);
+                    scene.environmentIntensity = val;
+                    iblVal.innerText = val.toFixed(1);
+                });
+
+                // Update Tone Mapping Exposure dynamically
+                expSlider.addEventListener("input", () => {
+                    const val = parseFloat(expSlider.value);
+                    scene.imageProcessingConfiguration.exposure = val;
+                    expVal.innerText = val.toFixed(1);
+                });
+
                 const fpsElem = document.getElementById("fps");
 
                 scene.onBeforeRenderObservable.add(() => {
                     let currentFps = engine.getFps();
                     fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
                     
-                    const stressLevel = parseFloat(slider.value);
+                    const stressLevel = parseFloat(stressSlider.value);
                     let colorLerpFactor = stressLevel > 0.33 ? (stressLevel - 0.33) / 0.67 : 0;
 
                     const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
                     const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
                     const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, colorLerpFactor);
 
-                    // Fade in the red stress light up to 0.5 intensity
                     stressLight.intensity = stressLevel * 0.5;
 
                     if (scene.animationGroups) {
