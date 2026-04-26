@@ -6,6 +6,7 @@
     
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
+    <script src="https://cdn.babylonjs.com/inspector/babylon.inspector.bundle.js"></script>
     
     <style>
         body { 
@@ -123,14 +124,9 @@
 
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
-                
-                // NO MORE GIANT SKYBOX. Just pure lighting data applied directly to the scene.
                 scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
                 scene.environmentIntensity = 1.5; 
-            });
 
-            viewer.onModelLoadedObservable.add(function(model) {
-                const scene = viewer.sceneManager.scene;
                 const engine = viewer.engine;
                 const slider = document.getElementById("stressSlider");
                 const fpsElem = document.getElementById("fps");
@@ -141,16 +137,19 @@
                 let isInitialized = false;
                 let vagusMat = null;
 
+                // Safely initialized inside the render loop to avoid undefined observable crashes
                 scene.onBeforeRenderObservable.add(() => {
                     
                     if (!isInitialized && scene.meshes.length > 1 && scene.materials.length > 0) {
                         
+                        // NEW: Launch the Babylon Inspector immediately so you can debug!
+                        scene.debugLayer.show({ embedMode: true });
+
                         const mainLight = scene.lights[0];
                         if (mainLight) {
                             mainLight.intensity = 0.5; 
                         }
 
-                        // --- SAFE NATIVE AO PIPELINE ---
                         scene.materials.forEach(mat => {
                             if (mat instanceof BABYLON.PBRMaterial) {
                                 const matName = mat.name ? mat.name.toLowerCase() : "";
@@ -158,12 +157,21 @@
                                 if (!matName.includes("vagus") && !matName.includes("glass")) {
                                     
                                     if (mat.metallicTexture) {
-                                        // Force the Ambient slot to read the ORM map
+                                        // Connect Ambient map
                                         mat.ambientTexture = mat.metallicTexture;
+                                        
+                                        // Ensure UV coordinates are explicitly matching UV0
+                                        mat.ambientTexture.coordinatesIndex = 0;
+                                        mat.metallicTexture.coordinatesIndex = 0;
 
-                                        // Pull AO from the R channel and crank the math to 6.0!
+                                        // Apply AO from Red channel
                                         mat.useAmbientOcclusionFromMetallicTextureRed = true;
+                                        
+                                        // Crank up the strength
                                         mat.ambientTextureStrength = 6.0; 
+                                        
+                                        // Force shadows over direct light
+                                        mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
                                     }
                                 }
                             }
@@ -222,11 +230,9 @@
                         isInitialized = true;
                     }
 
-                    // --- REAL-TIME RENDER LOOP ---
                     if (isInitialized) {
                         const stressLevel = parseFloat(slider.value);
                         
-                        // Fallback math so FPS doesn't read "Infinity" if the engine renders too fast
                         let currentFps = engine.getFps();
                         fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
                         
