@@ -65,21 +65,9 @@
         }
         #modal-img { max-width: 80vw; max-height: 80vh; border: 2px solid #555; border-radius: 8px; }
         .modal-hint { margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px; }
-
-        /* THE NEW CRASH SCREEN */
-        #crash-screen {
-            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: rgba(200, 0, 0, 0.9); padding: 30px; border: 2px solid white; z-index: 9999;
-            font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
-        }
     </style>
 </head>
 <body>
-
-    <div id="crash-screen">
-        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
-        <p id="crash-log">Check your GitHub folder. Is the .bin file missing?</p>
-    </div>
 
     <div id="image-modal" onclick="this.style.display='none'">
         <img id="modal-img" src="" alt="Texture Preview">
@@ -109,125 +97,137 @@
     <script>
         BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
             
-            // This forces the background to be transparent immediately, fixing the lost CSS gradient
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
-            });
+                
+                const engine = viewer.engine;
+                const instrumentation = new BABYLON.SceneInstrumentation(scene);
+                instrumentation.captureDrawCalls = true;
 
-            // DIAGNOSTIC TOOL: This catches if your files are missing from GitHub!
-            viewer.onModelErrorObservable.add(function(error) {
-                document.getElementById('crash-screen').style.display = 'block';
-                console.error("LOAD ERROR:", error);
-            });
+                const slider = document.getElementById("stressSlider");
+                const wireframeBtn = document.getElementById("wireframe-btn");
+                const fpsElem = document.getElementById("fps");
+                const drawCallsElem = document.getElementById("drawCalls");
+                const trisElem = document.getElementById("tris");
+                const vertsElem = document.getElementById("verts");
+                const gallery = document.getElementById("tex-gallery");
 
-            viewer.onModelLoadedObservable.add(function(model) {
-                try {
-                    const scene = viewer.sceneManager.scene;
-                    const engine = viewer.engine;
-                    
-                    // Double check clear color
-                    scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
-                    
-                    const mainLight = scene.lights[0]; 
-                    scene.environmentIntensity = 0.5; 
-                    
-                    const instrumentation = new BABYLON.SceneInstrumentation(scene);
-                    instrumentation.captureDrawCalls = true;
+                let isInitialized = false;
+                let vagusMat = null;
+                let isWireframe = false;
 
+                // Wireframe Button Listener
+                wireframeBtn.addEventListener("click", () => {
+                    isWireframe = !isWireframe;
                     scene.materials.forEach(mat => {
-                        if (mat instanceof BABYLON.PBRMaterial && mat.ambientTexture) {
-                            mat.ambientTextureStrength = 2.0; 
-                            mat.useAmbientInGrayScale = true; 
+                        if (mat instanceof BABYLON.Material) {
+                            mat.wireframe = isWireframe;
                         }
                     });
+                    wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
+                    wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
+                });
 
-                    const slider = document.getElementById("stressSlider");
-                    const wireframeBtn = document.getElementById("wireframe-btn");
+                // THE FIX: We put the setup logic inside the render loop, waiting for meshes to exist.
+                // This guarantees it will run regardless of how fast GitHub caches the file.
+                scene.onBeforeRenderObservable.add(() => {
                     
-                    // SAFE SEARCH: Prevents crash if a material lacks a name
-                    const vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus_glow"));
-
-                    let isWireframe = false;
-                    wireframeBtn.addEventListener("click", () => {
-                        isWireframe = !isWireframe;
+                    // --- ONE-TIME INITIALIZATION ---
+                    if (!isInitialized && scene.meshes.length > 1 && scene.materials.length > 0) {
+                        
+                        // 1. THE AO FIX (Targeting the glTF ORM map specifically)
                         scene.materials.forEach(mat => {
-                            if (mat instanceof BABYLON.Material) {
-                                mat.wireframe = isWireframe;
+                            if (mat instanceof BABYLON.PBRMaterial && mat.metallicTexture) {
+                                mat.ambientTextureStrength = 4.0; // Cranked up to 4x multiplier
+                                mat.useAmbientInGrayScale = true; 
                             }
                         });
-                        wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
-                        wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
-                    });
 
-                    fetch("./models/human_stress_v01.gltf").then(response => {
-                        const size = response.headers.get("content-length");
-                        if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
-                    }).catch(() => document.getElementById("fileSize").innerText = "Unknown");
+                        // 2. Safely find the Vagus material
+                        vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus_glow"));
 
-                    let totalTris = 0;
-                    let totalVerts = 0;
-                    scene.meshes.forEach(m => {
-                        totalVerts += m.getTotalVertices();
-                        const indices = m.getIndices();
-                        if (indices) totalTris += (indices.length / 3);
-                    });
-                    document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
-                    document.getElementById("verts").innerText = totalVerts.toLocaleString();
+                        // 3. Kickstart Animations
+                        if (scene.animationGroups && scene.animationGroups.length > 0) {
+                            scene.animationGroups.forEach(anim => anim.play(true));
+                        }
 
-                    const gallery = document.getElementById("tex-gallery");
-                    const textureFiles = [
-                        { file: "body_baseColor.jpg", label: "Base Color" },
-                        { file: "body_normal.jpg", label: "Normal" },
-                        { file: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
-                    ];
+                        // 4. Populate Stats
+                        let totalTris = 0;
+                        let totalVerts = 0;
+                        scene.meshes.forEach(m => {
+                            totalVerts += m.getTotalVertices() || 0;
+                            const indices = m.getIndices();
+                            if (indices) totalTris += (indices.length / 3);
+                        });
+                        trisElem.innerText = Math.round(totalTris).toLocaleString();
+                        vertsElem.innerText = totalVerts.toLocaleString();
 
-                    textureFiles.forEach(tex => {
-                        let box = document.createElement("div");
-                        box.className = "tex-box";
-                        const fullPath = `./models/${tex.file}`;
-                        box.style.backgroundImage = `url('${fullPath}')`;
-                        
-                        box.onclick = function() {
-                            document.getElementById('modal-img').src = fullPath;
-                            document.getElementById('image-modal').style.display = 'flex';
-                        };
-                        
-                        let label = document.createElement("div");
-                        label.className = "tex-label";
-                        label.innerText = tex.label;
-                        
-                        box.appendChild(label);
-                        gallery.appendChild(box);
-                    });
+                        // 5. Populate Gallery
+                        if (gallery.children.length === 0) {
+                            const textureFiles = [
+                                { file: "body_baseColor.jpg", label: "Base Color" },
+                                { file: "body_normal.jpg", label: "Normal" },
+                                { file: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
+                            ];
 
-                    scene.animationGroups.forEach(anim => anim.play(true));
+                            textureFiles.forEach(tex => {
+                                let box = document.createElement("div");
+                                box.className = "tex-box";
+                                const fullPath = `./models/${tex.file}`;
+                                box.style.backgroundImage = `url('${fullPath}')`;
+                                
+                                box.onclick = function() {
+                                    document.getElementById('modal-img').src = fullPath;
+                                    document.getElementById('image-modal').style.display = 'flex';
+                                };
+                                
+                                let label = document.createElement("div");
+                                label.className = "tex-label";
+                                label.innerText = tex.label;
+                                
+                                box.appendChild(label);
+                                gallery.appendChild(box);
+                            });
+                        }
 
-                    scene.onBeforeRenderObservable.add(() => {
+                        // 6. Fetch File Size
+                        fetch("./models/human_stress_v01.gltf").then(response => {
+                            const size = response.headers.get("content-length");
+                            if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
+                        }).catch(() => {});
+
+                        isInitialized = true;
+                    }
+
+                    // --- CONTINUOUS REAL-TIME UPDATES ---
+                    if (isInitialized) {
                         const stressLevel = parseFloat(slider.value);
-                        document.getElementById("fps").innerText = engine.getFps().toFixed();
-                        document.getElementById("drawCalls").innerText = instrumentation.drawCallsCounter.current;
+                        
+                        fpsElem.innerText = engine.getFps().toFixed();
+                        drawCallsElem.innerText = instrumentation.drawCallsCounter.current;
                         
                         const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
                         const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
                         const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, stressLevel);
 
-                        const lightStress = stressLevel * 0.3; 
-                        if (mainLight) {
+                        const mainLight = scene.lights[0];
+                        if (mainLight && mainLight.diffuse) {
+                            const lightStress = stressLevel * 0.3; 
                             mainLight.intensity = 1.0 - (lightStress * 0.7); 
                             mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
                         }
 
-                        const speed = 1.0 + (stressLevel * 3.0); 
-                        scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+                        if (scene.animationGroups) {
+                            const speed = 1.0 + (stressLevel * 3.0); 
+                            scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+                        }
 
-                        if(vagusMat) {
+                        if (vagusMat) {
                             vagusMat.emissiveColor = currentColor;
                             vagusMat.emissiveIntensity = 2.0 + (stressLevel * 15.0); 
                         }
-                    });
-                } catch(err) {
-                    console.error("UI SCRIPT CRASHED:", err);
-                }
+                    }
+                });
             });
         });
     </script>
