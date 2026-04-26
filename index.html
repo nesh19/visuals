@@ -10,12 +10,10 @@
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
-            /* Restored Gray Gradient Background */
             background: radial-gradient(circle, #BBBBBB 0%, #555555 100%); 
         }
         #renderCanvas { width: 100%; height: 100%; touch-action: none; display: block; z-index: 1; position: absolute; }
         
-        /* UI Floating Panels */
         .ui-float {
             position: absolute; background: rgba(15, 15, 15, 0.9); padding: 15px; 
             border-radius: 8px; border: 1px solid #444; z-index: 5; backdrop-filter: blur(8px);
@@ -33,7 +31,6 @@
             border: 1px solid #555; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 10px;
         }
 
-        /* Stats & Gallery */
         #left-container { position: absolute; top: 20px; left: 20px; z-index: 5; display: flex; flex-direction: column; gap: 15px; pointer-events: none;}
         #stats-panel { background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border-left: 3px solid #00ff00; font-size: 11px; pointer-events: auto;}
         .stat-val { color: #00ff00; font-weight: bold; }
@@ -74,10 +71,7 @@
         </select>
 
         <label>IBL Intensity</label>
-        <input type="range" id="iblIntensity" min="0" max="3" step="0.1" value="1.2">
-
-        <label>Studio Light</label>
-        <input type="range" id="lightIntensity" min="0" max="2" step="0.1" value="0.5">
+        <input type="range" id="iblIntensity" min="0" max="4" step="0.1" value="1.5">
 
         <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
     </div>
@@ -95,33 +89,23 @@
 
         const createScene = async function () {
             const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent to show CSS gradient
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent for CSS background
 
             const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.2, 4, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
             camera.wheelPrecision = 50;
 
-            // 1. Initial Tone Mapping
+            // Tone Mapping
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
 
-            // 2. Lighting Setup
+            // ENVIRONMENT ONLY (NO DIRECT LIGHTS)
             const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
             scene.environmentTexture = envTexture;
-            scene.environmentIntensity = 1.2;
-
-            // Studio Light (Hemi) - Lower intensity allows AO to "breath"
-            const hemiLight = new BABYLON.HemisphericLight("hemiLight", new BABYLON.Vector3(0, 1, 0), scene);
-            hemiLight.intensity = 0.5;
-            hemiLight.groundColor = new BABYLON.Color3(0.1, 0.1, 0.1);
-
-            // Red Stress Light
-            const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
-            stressLight.intensity = 0;
-            stressLight.diffuse = new BABYLON.Color3(1, 0, 0);
+            scene.environmentIntensity = 1.5;
 
             try {
-                // Load Assets
+                // Load glTF and .bin
                 await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.gltf", scene);
                 camera.setTarget(scene.meshes[0] || BABYLON.Vector3.Zero());
 
@@ -129,18 +113,18 @@
                     scene.animationGroups.forEach(anim => anim.play(true));
                 }
 
-                // Restore AO visibility for all materials
+                // Force AO visibility on all PBR materials
                 scene.materials.forEach(mat => {
                     if (mat && mat.getTypeName() === "PBRMaterial") {
-                        mat.occlusionStrength = 1.0; 
+                        mat.occlusionStrength = 1.0;
                         mat.useAmbientOcclusionFromMetallicTexture = true;
-                        // Lower direct intensity makes the AO (which occludes environment) more prominent
-                        mat.directIntensity = 0.7; 
-                        mat.environmentIntensity = 1.3;
+                        // Since there are no lights, directIntensity won't do anything,
+                        // but setting environment higher helps the AO contrast.
+                        mat.environmentIntensity = 1.0; 
                     }
                 });
 
-                // Stats: Tris
+                // Calculate Tris
                 let totalTris = 0;
                 scene.meshes.forEach(m => {
                     const indices = m.getIndices();
@@ -148,19 +132,18 @@
                 });
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
 
-                // Calculate Whole Model Size (gltf + bin)
-                const filesToSize = ["./models/human_stress_v01.gltf", "./models/human_stress_v01.bin"];
-                let totalBytes = 0;
-                await Promise.all(filesToSize.map(url => 
-                    fetch(url, { method: 'HEAD' }).then(res => {
-                        totalBytes += parseInt(res.headers.get('content-length') || 0);
-                    })
-                ));
-                document.getElementById("fileSize").innerText = (totalBytes / (1024 * 1024)).toFixed(2) + " MB";
+                // Calculate Combined File Size (gltf + bin)
+                const modelFiles = ["./models/human_stress_v01.gltf", "./models/human_stress_v01.bin"];
+                let totalSize = 0;
+                for (const url of modelFiles) {
+                    const response = await fetch(url, { method: 'HEAD' });
+                    totalSize += parseInt(response.headers.get('content-length') || 0);
+                }
+                document.getElementById("fileSize").innerText = (totalSize / (1024 * 1024)).toFixed(2) + " MB";
 
                 let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
 
-                // Gallery Previews
+                // Texture Previews (512px)
                 const gallery = document.getElementById("tex-gallery");
                 const textureFiles = [
                     { file: "body_baseColor_512.jpg", label: "Diffuse" },
@@ -183,8 +166,8 @@
                     gallery.appendChild(box);
                 });
 
-                // Control Listeners
-                document.getElementById("toneMapSelect").addEventListener("change", (e) => {
+                // UI Logic
+                document.getElementById("toneMapSelect").onchange = (e) => {
                     const val = e.target.value;
                     if (val === "none") {
                         scene.imageProcessingConfiguration.toneMappingEnabled = false;
@@ -194,15 +177,11 @@
                             BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES : 
                             BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
                     }
-                });
+                };
 
-                document.getElementById("iblIntensity").addEventListener("input", (e) => {
+                document.getElementById("iblIntensity").oninput = (e) => {
                     scene.environmentIntensity = parseFloat(e.target.value);
-                });
-
-                document.getElementById("lightIntensity").addEventListener("input", (e) => {
-                    hemiLight.intensity = parseFloat(e.target.value);
-                });
+                };
 
                 const wireBtn = document.getElementById("wireframe-btn");
                 let isWire = false;
@@ -216,11 +195,12 @@
                     document.getElementById("fps").innerText = engine.getFps().toFixed();
                     const stress = parseFloat(slider.value);
 
-                    stressLight.intensity = stress * 1.2;
+                    // Animation speed
                     if (scene.animationGroups) {
                         scene.animationGroups.forEach(anim => anim.speedRatio = 1.0 + (stress * 3.0));
                     }
 
+                    // Vagus Emissive (Still works without scene lights!)
                     if (vagusMat) {
                         if (stress > 0) {
                             vagusMat.emissiveColor = BABYLON.Color3.Lerp(new BABYLON.Color3(0.1, 0.3, 1.0), new BABYLON.Color3(1, 0, 0), stress);
@@ -231,7 +211,7 @@
                     }
                 });
 
-            } catch (err) { console.error(err); }
+            } catch (err) { console.error("Scene Setup Error:", err); }
             return scene;
         };
 
