@@ -14,14 +14,20 @@
         }
         #renderCanvas { width: 100%; height: 100%; touch-action: none; display: block; z-index: 1; position: absolute; }
         
-        /* UI Panels */
-        .ui-float {
+        .ui-panel {
             position: absolute; background: rgba(15, 15, 15, 0.9); padding: 15px; 
             border-radius: 8px; border: 1px solid #444; z-index: 5; backdrop-filter: blur(8px);
         }
 
-        #stress-panel { bottom: 30px; left: 50%; transform: translateX(-50%); width: 320px; text-align: center; }
+        /* Top Right: Settings */
         #settings-panel { top: 20px; right: 20px; width: 220px; font-size: 11px; }
+
+        /* Top Left: Project Data */
+        #left-container { position: absolute; top: 20px; left: 20px; z-index: 5; display: flex; flex-direction: column; gap: 15px; pointer-events: none;}
+        #stats-panel { background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border-left: 3px solid #00ff00; font-size: 11px; pointer-events: auto;}
+        
+        /* Bottom: Stress Slider */
+        #stress-panel { bottom: 30px; left: 50%; transform: translateX(-50%); width: 320px; text-align: center; }
 
         label { display: block; margin-bottom: 5px; color: #888; text-transform: uppercase; letter-spacing: 1px; }
         select, input[type=range] { width: 100%; margin-bottom: 12px; cursor: pointer; accent-color: #ff4d4d; }
@@ -32,13 +38,10 @@
             border: 1px solid #555; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 10px;
         }
 
-        /* Stats & Gallery */
-        #left-container { position: absolute; top: 20px; left: 20px; z-index: 5; display: flex; flex-direction: column; gap: 15px; pointer-events: none;}
-        #stats-panel { background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border-left: 3px solid #00ff00; font-size: 11px; pointer-events: auto;}
         .stat-val { color: #00ff00; font-weight: bold; }
 
         #tex-gallery { display: flex; gap: 8px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; flex-wrap: wrap; max-width: 250px; pointer-events: auto;}
-        .tex-box { width: 64px; height: 64px; border: 1px solid #444; border-radius: 4px; background-size: cover; position: relative; cursor: pointer; }
+        .tex-box { width: 64px; height: 64px; border: 1px solid #444; border-radius: 4px; background-size: cover; position: relative; cursor: pointer; background-color: #1a1a1a; }
         .tex-label { position: absolute; bottom: 0; width: 100%; text-align: center; font-size: 8px; background: rgba(0,0,0,0.8); padding: 2px 0; }
 
         #image-modal { 
@@ -58,7 +61,7 @@
 
     <div id="crash-screen">
         <h2 style="margin-top:0;">⚠️ LOAD FAILED</h2>
-        <p>Check folder names and file case sensitivity.</p>
+        <p>Check if you are running on a local server or GitHub Pages.</p>
     </div>
 
     <div id="image-modal" onclick="this.style.display='none'">
@@ -70,12 +73,12 @@
             <strong>PROJECT DATA</strong><br>
             FPS: <span id="fps" class="stat-val">0</span><br>
             Total Tris: <span id="tris" class="stat-val">0</span><br>
-            Full Model Size: <span id="fileSize" class="stat-val">...</span>
+            Full Model Size: <span id="fileSize" class="stat-val">Calculating...</span>
         </div>
         <div id="tex-gallery"></div>
     </div>
 
-    <div id="settings-panel" class="ui-float">
+    <div id="settings-panel" class="ui-panel">
         <label>Tone Mapping</label>
         <select id="toneMapSelect">
             <option value="aces">ACES (Cinematic)</option>
@@ -89,8 +92,8 @@
         <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
     </div>
 
-    <div id="stress-panel" class="ui-float">
-        <strong style="color:#aaa; font-size: 12px; letter-spacing: 1px;">CORTISOL / STRESS</strong>
+    <div id="stress-panel" class="ui-panel">
+        <strong style="color:#aaa; font-size: 11px; letter-spacing: 1px;">CORTISOL / STRESS</strong>
         <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
     </div>
 
@@ -102,23 +105,22 @@
 
         const createScene = async function () {
             const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent for CSS background
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Transparent to show gray CSS gradient
 
             const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.2, 4, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
             camera.wheelPrecision = 50;
 
-            // Tone Mapping Setup
+            // Environment Only (to preserve AO from ORM map)
+            scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
+            scene.environmentIntensity = 1.5;
+
+            // Tone Mapping
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
 
-            // Environment Lighting (ONLY IBL)
-            const envTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-            scene.environmentTexture = envTexture;
-            scene.environmentIntensity = 1.5;
-
             try {
-                // Load Model using your directory
+                // Load Model
                 await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.gltf", scene);
                 camera.setTarget(scene.meshes[0] || BABYLON.Vector3.Zero());
 
@@ -126,7 +128,7 @@
                     scene.animationGroups.forEach(anim => anim.play(true));
                 }
 
-                // Restore AO priority on all PBR materials
+                // Force AO visibility on PBR materials
                 scene.materials.forEach(mat => {
                     if (mat && mat.getTypeName() === "PBRMaterial") {
                         mat.occlusionStrength = 1.0;
@@ -134,7 +136,7 @@
                     }
                 });
 
-                // Calculate Tris
+                // Stats calculation
                 let totalTris = 0;
                 scene.meshes.forEach(m => {
                     const indices = m.getIndices();
@@ -142,20 +144,20 @@
                 });
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
 
-                // Calculate Combined File Size (gltf + bin)
+                // Combined File Size (gltf + bin)
                 const modelFiles = ["./models/human_stress_v01.gltf", "./models/human_stress_v01.bin"];
-                let totalSize = 0;
+                let totalBytes = 0;
                 for (const url of modelFiles) {
                     try {
                         const response = await fetch(url, { method: 'HEAD' });
-                        totalSize += parseInt(response.headers.get('content-length') || 0);
-                    } catch(e) { console.error("File size error:", e); }
+                        if (response.ok) totalBytes += parseInt(response.headers.get('content-length') || 0);
+                    } catch(e) { console.warn("Size check failed for:", url); }
                 }
-                document.getElementById("fileSize").innerText = (totalSize / (1024 * 1024)).toFixed(2) + " MB";
+                document.getElementById("fileSize").innerText = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(2) + " MB" : "Unknown";
 
                 let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
 
-                // Texture Previews using your 512px files
+                // Texture Previews using 512px optimized maps
                 const gallery = document.getElementById("tex-gallery");
                 const textureFiles = [
                     { file: "body_baseColor_512.jpg", label: "Diffuse" },
@@ -166,9 +168,10 @@
                 textureFiles.forEach(tex => {
                     let box = document.createElement("div");
                     box.className = "tex-box";
-                    box.style.backgroundImage = `url('./models/${tex.file}')`;
+                    const path = `./models/${tex.file}`;
+                    box.style.backgroundImage = `url('${path}')`;
                     box.onclick = () => {
-                        document.getElementById('modal-img').src = `./models/${tex.file}`;
+                        document.getElementById('modal-img').src = path;
                         document.getElementById('image-modal').style.display = 'flex';
                     };
                     let label = document.createElement("div");
@@ -178,13 +181,11 @@
                     gallery.appendChild(box);
                 });
 
-                // UI LISTENERS - Fixes the "not working" issue
+                // Hook up UI listeners
                 document.getElementById("toneMapSelect").onchange = (e) => {
                     const val = e.target.value;
-                    if (val === "none") {
-                        scene.imageProcessingConfiguration.toneMappingEnabled = false;
-                    } else {
-                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
+                    scene.imageProcessingConfiguration.toneMappingEnabled = (val !== "none");
+                    if (val !== "none") {
                         scene.imageProcessingConfiguration.toneMappingType = (val === "aces") ? 
                             BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES : 
                             BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
@@ -203,8 +204,10 @@
                 };
 
                 const slider = document.getElementById("stressSlider");
+                const fpsElem = document.getElementById("fps");
+                
                 scene.onBeforeRenderObservable.add(() => {
-                    document.getElementById("fps").innerText = engine.getFps().toFixed();
+                    fpsElem.innerText = engine.getFps().toFixed();
                     const stress = parseFloat(slider.value);
 
                     if (scene.animationGroups) {
@@ -223,7 +226,7 @@
 
             } catch (err) { 
                 document.getElementById('crash-screen').style.display = 'block';
-                console.error(err); 
+                console.error("Critical Setup Error:", err); 
             }
             return scene;
         };
