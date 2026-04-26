@@ -126,7 +126,7 @@
 
             const mainLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-1, -2, -1), scene);
             mainLight.position = new BABYLON.Vector3(20, 40, 20);
-            mainLight.intensity = 0.05; // Restored to normal since Tone Mapping is on
+            mainLight.intensity = 0.0; // Restored to normal since Tone Mapping is on
 
             // Use the Default Environment helper to perfectly map the studio lighting without a skybox
             const envHelper = scene.createDefaultEnvironment({
