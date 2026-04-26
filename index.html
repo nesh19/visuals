@@ -146,32 +146,35 @@
                     mainLight.intensity = 0.5; 
                 }
 
-                // --- THE NUCLEAR AO OVERRIDE ---
-                // 1. Manually load the raw image directly from GitHub
-                const manualOrmTexture = new BABYLON.Texture("./models/body_occlusionRoughnessMetallic.jpg", scene);
-                
-                // 2. Force it to project onto the primary UV channel (UV0)
-                manualOrmTexture.coordinatesIndex = 0;
-
+                // --- THE NATIVE AO FIX ---
                 scene.materials.forEach(mat => {
                     if (mat instanceof BABYLON.PBRMaterial) {
                         const matName = mat.name ? mat.name.toLowerCase() : "";
                         
+                        // Ignore transparent/glowing materials to avoid artifacts
                         if (!matName.includes("vagus") && !matName.includes("glass")) {
                             
-                            // 3. Slot the manual texture into BOTH required channels
-                            mat.metallicTexture = manualOrmTexture;
-                            mat.ambientTexture = manualOrmTexture;
-                            
-                            // 4. EXPLICITLY TELL BABYLON WHAT EACH RGB CHANNEL DOES
-                            mat.useAmbientOcclusionFromMetallicTextureRed = true;
-                            mat.useRoughnessFromMetallicTextureGreen = true;
-                            mat.useMetallnessFromMetallicTextureBlue = true;
-                            
-                            // 5. Turn up the contrast and mathematically force the shadows onto the direct lights
-                            mat.ambientTextureStrength = 3.0; 
-                            mat.ambientTextureImpactOnAnalyticalLights = 1.0; // Fixed from the broken enum!
-                            mat.ambientTextureImpactOnEnvironment = 1.0;
+                            // If Babylon naturally loaded the ORM map into the Metallic slot...
+                            if (mat.metallicTexture) {
+                                
+                                // 1. Ensure the Ambient slot is also holding the exact same map
+                                if (!mat.ambientTexture) {
+                                    mat.ambientTexture = mat.metallicTexture;
+                                }
+
+                                // 2. Force BOTH slots to read from your primary UV coordinates (UV0)
+                                mat.metallicTexture.coordinatesIndex = 0;
+                                mat.ambientTexture.coordinatesIndex = 0;
+
+                                // 3. Explicitly tell the material to grab shadows from the Red channel
+                                mat.useAmbientOcclusionFromMetallicTextureRed = true;
+                                
+                                // 4. Crank up the shadow strength so it's super visible
+                                mat.ambientTextureStrength = 3.0; 
+                                
+                                // 5. Force the shadows to block direct light, not just environment light
+                                mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
+                            }
                         }
                     }
                 });
