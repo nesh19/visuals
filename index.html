@@ -167,7 +167,7 @@
                                 // Boosted from 3.0 to 6.0! Tweak this number to fine-tune your shadows.
                                 mat.ambientTextureStrength = 6.0; 
                                 
-                                mat.ambientTextureImpactOnAnalyticalLights = 3.0; 
+                                mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
                             }
                         }
                     }
@@ -233,4 +233,33 @@
                         colorLerpFactor = (stressLevel - 0.33) / 0.67;
                     }
 
-                    const calmColor = new BABYLON.Color3(0.1, 0.3,
+                    const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
+                    const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
+                    const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, colorLerpFactor);
+
+                    if (mainLight && mainLight.diffuse) {
+                        const lightStress = stressLevel * 0.3; 
+                        mainLight.intensity = 0.5 - (lightStress * 0.8); 
+                        mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
+                    }
+
+                    if (scene.animationGroups) {
+                        const speed = 1.0 + (stressLevel * 3.0); 
+                        scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+                    }
+
+                    if (vagusMat) {
+                        vagusMat.emissiveColor = currentColor;
+                        vagusMat.emissiveIntensity = 2.0 + (colorLerpFactor * 15.0); 
+                    }
+                });
+            });
+            
+            viewer.onModelErrorObservable.add(function(error) {
+                document.getElementById('crash-screen').style.display = 'block';
+                console.error("LOAD ERROR:", error);
+            });
+        });
+    </script>
+</body>
+</html>
