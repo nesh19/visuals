@@ -12,7 +12,8 @@
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
-            background: radial-gradient(circle, #222222 0%, #050505 100%); 
+            /* Pro-grade Dark Slate background */
+            background: radial-gradient(circle, #333333 0%, #050505 100%); 
             touch-action: none; 
         }
         #renderCanvas { width: 100%; height: 100%; display: block; z-index: 1; position: absolute; outline: none; background: transparent; }
@@ -25,7 +26,7 @@
         
         #left-container {
             position: absolute; top: 20px; left: 20px; z-index: 5;
-            display: flex; flex-direction: column; gap: 15px; pointer-events: none; width: 250px;
+            display: flex; flex-direction: column; gap: 15px; pointer-events: none; width: 260px;
         }
 
         .panel-box { background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; pointer-events: auto; }
@@ -85,7 +86,7 @@
             <strong>STATISTICS</strong><br>
             FPS: <span id="fps" class="stat-val">0</span><br>
             Tris: <span id="tris" class="stat-val">0</span> | Verts: <span id="verts" class="stat-val">0</span><br>
-            Total: <span id="fileSize" class="stat-val">Calculating...</span>
+            Total Weight: <span id="fileSize" class="stat-val">Calculating...</span>
         </div>
         
         <div id="tex-gallery" class="panel-box" style="background: rgba(0,0,0,0.6);"></div>
@@ -130,23 +131,26 @@
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
+            // Setup ACES Tone Mapping
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
             scene.imageProcessingConfiguration.exposure = 1.1; 
 
+            // --- CAMERA FIXES ---
             const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 6, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
             camera.wheelPrecision = 150; 
             camera.inertia = 0.9; 
-            camera.minZ = 0.01; 
-            camera.lowerRadiusLimit = 0.5; 
-            camera.upperRadiusLimit = 5.0;
+            camera.minZ = 0.01; // Prevents "slicing" the model
+            camera.lowerRadiusLimit = 4.2; // Keeps you outside the lungs
+            camera.upperRadiusLimit = 15.0;
 
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
             scene.environmentIntensity = 1.2;
 
+            // --- AMBIENT FILL ---
             const ambientLight = new BABYLON.HemisphericLight("ambientLight", new BABYLON.Vector3(0, 1, 0), scene);
-            ambientLight.intensity = 0.3; // Dropped intensity to keep AO shadows deep
+            ambientLight.intensity = 0.4;
             ambientLight.groundColor = new BABYLON.Color3(0, 0, 0);
 
             const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
@@ -154,7 +158,7 @@
             stressLight.diffuse = new BABYLON.Color3(1.0, 0.0, 0.0); 
             stressLight.intensity = 0.0; 
 
-            // Temporary: Show inspector again to visually confirm AO slot
+            // Inspector on global root
             scene.debugLayer.show({ globalRoot: document.body });
 
             try {
@@ -162,26 +166,19 @@
                 
                 camera.setTarget(scene.meshes[0]);
 
-                // --- AO & PBR ASSERTION LOOP ---
+                // --- THE AO & MATERIAL OVERRIDE ---
                 scene.materials.forEach(mat => {
                     if (mat instanceof BABYLON.PBRMaterial) {
                         const matName = mat.name ? mat.name.toLowerCase() : "";
                         
-                        // Apply only to the main body/organs
+                        // Ignore the glowing vagus nerve and glass
                         if (!matName.includes("vagus") && !matName.includes("glass")) {
                             
-                            // 1. Check if the metallic texture is present (the ORM map)
+                            // Re-assert AO from ORM Map
                             if (mat.metallicTexture) {
-                                // 2. Explicitly link it to the Ambient/Occlusion slot
                                 mat.ambientTexture = mat.metallicTexture;
-                                
-                                // 3. Tell Babylon to pull AO from the RED channel
                                 mat.useAmbientOcclusionFromMetallicTextureRed = true;
-                                
-                                // 4. Set visibility. 1.0 is standard, 1.5-2.0 makes it "pop"
-                                mat.ambientTextureStrength = 1.5; 
-                                
-                                // 5. Force the AO to darken the direct lights
+                                mat.ambientTextureStrength = 2.0; // Cranked up for depth
                                 mat.ambientTextureImpactOnAnalyticalLights = 1.0;
                             }
                         }
@@ -192,7 +189,7 @@
                     scene.animationGroups.forEach(anim => anim.play(true));
                 }
 
-                // Stats & UI ...
+                // Stats calculation
                 let totalTris = 0;
                 let totalVerts = 0;
                 scene.meshes.forEach(m => {
@@ -203,7 +200,7 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                // File Size HEAD requests...
+                // Smart size calculation (HEAD request)
                 const filesToSize = ["./models/human_stress_v01.bin", "./models/body_baseColor.jpg", "./models/body_normal.jpg", "./models/body_occlusionRoughnessMetallic.jpg"];
                 Promise.all(filesToSize.map(url => fetch(url, { method: 'HEAD' }).then(res => parseInt(res.headers.get('content-length') || 0, 10)).catch(() => 0)))
                 .then(sizes => {
@@ -211,10 +208,12 @@
                     document.getElementById("fileSize").innerText = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(2) + " MB" : "Ready";
                 });
 
+                // Native Vagus capture
                 let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
-                let originalVagusColor = vagusMat && vagusMat.emissiveColor ? vagusMat.emissiveColor.clone() : new BABYLON.Color3(0.1, 0.3, 1.0);
+                let originalVagusColor = (vagusMat && vagusMat.emissiveColor) ? vagusMat.emissiveColor.clone() : new BABYLON.Color3(0.1, 0.3, 1.0);
                 let originalVagusIntensity = vagusMat ? (vagusMat.emissiveIntensity || 2.0) : 2.0;
 
+                // Texture Gallery
                 const gallery = document.getElementById("tex-gallery");
                 if (gallery.children.length === 0) {
                     const textureFiles = [
@@ -235,6 +234,7 @@
                     });
                 }
 
+                // UI Wiring
                 const wireframeBtn = document.getElementById("wireframe-btn");
                 let isWireframe = false;
                 wireframeBtn.addEventListener("click", () => {
@@ -261,8 +261,7 @@
                 expSlider.addEventListener("input", () => { scene.imageProcessingConfiguration.exposure = parseFloat(expSlider.value); expVal.innerText = parseFloat(expSlider.value).toFixed(1); });
 
                 scene.onBeforeRenderObservable.add(() => {
-                    let currentFps = engine.getFps();
-                    document.getElementById("fps").innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
+                    document.getElementById("fps").innerText = engine.getFps().toFixed();
                     const stressLevel = parseFloat(stressSlider.value);
                     let colorLerpFactor = stressLevel > 0.33 ? (stressLevel - 0.33) / 0.67 : 0;
                     const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
