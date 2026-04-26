@@ -11,10 +11,11 @@
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
-            background: radial-gradient(circle, #BBBBBB 0%, #555555 100%); 
-            touch-action: none; /* Prevents pull-to-refresh on mobile */
+            /* Smoother, neutral gray background */
+            background: radial-gradient(circle, #777777 0%, #333333 100%); 
+            touch-action: none; 
         }
-        #renderCanvas { width: 100%; height: 100%; display: block; z-index: 1; position: absolute; outline: none; }
+        #renderCanvas { width: 100%; height: 100%; display: block; z-index: 1; position: absolute; outline: none; background: transparent; }
         
         #ui-panel { 
             position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
@@ -22,38 +23,17 @@
             border: 1px solid #444; width: 320px; text-align: center; z-index: 5; backdrop-filter: blur(5px);
         }
         
-        .slider-group { margin-top: 15px; text-align: left; }
-        .slider-label { font-size: 10px; color: #aaa; letter-spacing: 1px; display: flex; justify-content: space-between; }
-        .slider-val { color: #00ff00; }
-        input[type=range] { width: 100%; margin-top: 5px; cursor: pointer; accent-color: #ff4d4d; }
-        
-        /* Specific coloring for the lighting sliders */
-        #iblSlider { accent-color: #4da6ff; }
-        #expSlider { accent-color: #ffb84d; }
-
-        #wireframe-btn {
-            width: 100%; margin-top: 15px; padding: 8px; cursor: pointer;
-            background: #222; color: #aaa; border: 1px solid #555;
-            border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px;
-            letter-spacing: 1px; transition: all 0.2s ease;
-        }
-        #wireframe-btn:hover { background: #444; color: #fff; border-color: #888; }
-
         #left-container {
             position: absolute; top: 20px; left: 20px; z-index: 5;
-            display: flex; flex-direction: column; gap: 15px; pointer-events: none;
+            display: flex; flex-direction: column; gap: 15px; pointer-events: none; width: 250px;
         }
 
-        #stats-panel { 
-            background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; border-left: 3px solid #00ff00; 
-            font-size: 12px; line-height: 1.5; pointer-events: auto;
-        }
+        .panel-box { background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; pointer-events: auto; }
+        
+        #stats-panel { border-left: 3px solid #00ff00; font-size: 12px; line-height: 1.5; }
         .stat-val { color: #00ff00; font-weight: bold; }
 
-        #tex-gallery { 
-            display: flex; gap: 8px; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; 
-            flex-wrap: wrap; max-width: 250px; pointer-events: auto;
-        }
+        #tex-gallery { display: flex; gap: 8px; flex-wrap: wrap; }
         .tex-box { 
             width: 64px; height: 64px; border: 1px solid #444; background-color: #1a1a1a; 
             border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center;
@@ -66,6 +46,24 @@
             font-size: 9px; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
             background: rgba(0,0,0,0.8); padding: 3px 0;
         }
+
+        /* Controls styling */
+        .slider-group { margin-top: 15px; text-align: left; }
+        .slider-label { font-size: 10px; color: #aaa; letter-spacing: 1px; display: flex; justify-content: space-between; }
+        .slider-val { color: #00ff00; }
+        input[type=range] { width: 100%; margin-top: 5px; cursor: pointer; accent-color: #ff4d4d; }
+        select { width: 100%; background: #222; color: white; border: 1px solid #555; padding: 6px; margin-top: 5px; font-family: 'Consolas', monospace; border-radius: 4px; cursor: pointer;}
+        
+        #iblSlider { accent-color: #4da6ff; }
+        #expSlider { accent-color: #ffb84d; }
+
+        #wireframe-btn {
+            width: 100%; margin-top: 15px; padding: 8px; cursor: pointer;
+            background: #222; color: #aaa; border: 1px solid #555;
+            border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px;
+            letter-spacing: 1px; transition: all 0.2s ease;
+        }
+        #wireframe-btn:hover { background: #444; color: #fff; border-color: #888; }
 
         #image-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -81,15 +79,12 @@
             font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
         }
 
-        /* --- MOBILE RESPONSIVE LAYOUT --- */
         @media (max-width: 768px) {
             #ui-panel { width: 85%; bottom: 15px; padding: 15px; }
-            #left-container { top: 10px; left: 10px; flex-direction: row; flex-wrap: wrap; max-width: calc(100% - 20px); justify-content: space-between; }
-            #stats-panel { padding: 10px; font-size: 10px; width: 100%; box-sizing: border-box; }
-            #tex-gallery { max-width: 100%; justify-content: center; width: 100%; }
+            #left-container { top: 10px; left: 10px; flex-direction: row; flex-wrap: wrap; width: calc(100% - 20px); justify-content: space-between; }
+            .panel-box { width: 100%; box-sizing: border-box; padding: 10px; }
+            #tex-gallery { justify-content: center; }
             .tex-box { width: 50px; height: 50px; }
-            .tex-label { font-size: 8px; }
-            .slider-group { margin-top: 10px; }
         }
     </style>
 </head>
@@ -97,7 +92,7 @@
 
     <div id="crash-screen">
         <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
-        <p id="crash-log">Check your GitHub folder. Is the file missing?</p>
+        <p id="crash-log">Check your GitHub folder.</p>
     </div>
 
     <div id="image-modal" onclick="this.style.display='none'">
@@ -106,33 +101,41 @@
     </div>
 
     <div id="left-container">
-        <div id="stats-panel">
+        <div id="stats-panel" class="panel-box">
             <strong>STATISTICS</strong><br>
             FPS: <span id="fps" class="stat-val">0</span><br>
-            Tris: <span id="tris" class="stat-val">0</span> | Verts: <span id="verts" class="stat-val">0</span><br>
-            Size: <span id="fileSize" class="stat-val">Calculating...</span>
+            Tris: <span id="tris" class="stat-val">0</span> | Verts: <span id="verts" class="stat-val">0</span>
         </div>
-        <div id="tex-gallery"></div>
+        
+        <div id="tex-gallery" class="panel-box" style="background: rgba(0,0,0,0.6);"></div>
+
+        <div id="lighting-controls" class="panel-box" style="border-left: 3px solid #ffb84d;">
+            <div class="slider-group" style="margin-top: 0;">
+                <div class="slider-label"><span>TONEMAPPING</span></div>
+                <select id="tonemapSelect">
+                    <option value="aces" selected>ACES (Cinematic)</option>
+                    <option value="standard">Standard (Filmic)</option>
+                    <option value="none">None (Linear)</option>
+                </select>
+            </div>
+
+            <div class="slider-group">
+                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.0</span></div>
+                <input type="range" id="iblSlider" min="0" max="3" step="0.1" value="1.0">
+            </div>
+            
+            <div class="slider-group">
+                <div class="slider-label"><span>EXPOSURE</span> <span id="expVal" class="slider-val">1.0</span></div>
+                <input type="range" id="expSlider" min="0.1" max="4" step="0.1" value="1.0">
+            </div>
+        </div>
     </div>
 
     <div id="ui-panel">
-        <div class="slider-group">
+        <div class="slider-group" style="margin-top: 0;">
             <div class="slider-label"><span>CORTISOL / STRESS</span></div>
             <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
         </div>
-
-        <div style="display: flex; gap: 15px;">
-            <div class="slider-group" style="flex: 1;">
-                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.5</span></div>
-                <input type="range" id="iblSlider" min="0" max="3" step="0.1" value="1.5">
-            </div>
-            
-            <div class="slider-group" style="flex: 1;">
-                <div class="slider-label"><span>EXPOSURE</span> <span id="expVal" class="slider-val">1.2</span></div>
-                <input type="range" id="expSlider" min="0.1" max="4" step="0.1" value="1.2">
-            </div>
-        </div>
-
         <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
     </div>
 
@@ -144,32 +147,29 @@
 
         const createScene = async function () {
             const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // Allows the CSS gradient to show through
 
-            // Setup Tone Mapping & Exposure
+            // Setup Tonemapping
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-            scene.imageProcessingConfiguration.exposure = 1.2; // Boosted baseline exposure
+            scene.imageProcessingConfiguration.exposure = 1.0; 
 
             const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 3, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
-            camera.wheelPrecision = 50;
-            camera.minZ = 0.1;
-            // Prevent camera from zooming into the mesh or flying too far away on mobile
+            
+            // --- SOFT ZOOM SETTINGS ---
+            camera.wheelPrecision = 150; // Higher number = softer/slower scroll zoom
+            camera.inertia = 0.9; // Smooth drifting effect
             camera.lowerRadiusLimit = 1.0; 
             camera.upperRadiusLimit = 10.0;
 
-            // Pure IBL lighting - increased baseline to brighten the scene
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-            scene.environmentIntensity = 1.5;
+            scene.environmentIntensity = 1.0;
 
-            // Stress Tint Light
             const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
             stressLight.position = new BABYLON.Vector3(20, 40, 20);
             stressLight.diffuse = new BABYLON.Color3(1.0, 0.0, 0.0); 
             stressLight.intensity = 0.0; 
-
-            // DEBUGGER REMOVED!
 
             try {
                 await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.gltf", scene);
@@ -190,28 +190,34 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                fetch("./models/human_stress_v01.bin")
-                    .then(res => res.blob())
-                    .then(blob => document.getElementById("fileSize").innerText = (blob.size / (1024 * 1024)).toFixed(2) + " MB")
-                    .catch(() => document.getElementById("fileSize").innerText = "Unknown");
-
+                // --- VAGUS NATIVE COLOR CAPTURE ---
                 let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
+                let originalVagusColor = new BABYLON.Color3(0.1, 0.3, 1.0); // Fallback color
+                let originalVagusIntensity = 2.0;
+                
+                if (vagusMat && vagusMat.emissiveColor) {
+                    originalVagusColor = vagusMat.emissiveColor.clone();
+                    originalVagusIntensity = vagusMat.emissiveIntensity || 2.0;
+                }
 
                 const gallery = document.getElementById("tex-gallery");
                 if (gallery.children.length === 0) {
+                    // Make sure you save these _512.jpg versions in your models folder!
                     const textureFiles = [
-                        { file: "body_baseColor.jpg", label: "Base Color" },
-                        { file: "body_normal.jpg", label: "Normal" },
-                        { file: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
+                        { file: "body_baseColor_512.jpg", full: "body_baseColor.jpg", label: "Base Color" },
+                        { file: "body_normal_512.jpg", full: "body_normal.jpg", label: "Normal" },
+                        { file: "body_occlusionRoughnessMetallic_512.jpg", full: "body_occlusionRoughnessMetallic.jpg", label: "ORM Map" }
                     ];
 
                     textureFiles.forEach(tex => {
                         let box = document.createElement("div");
                         box.className = "tex-box";
-                        const fullPath = `./models/${tex.file}`;
-                        box.style.backgroundImage = `url('${fullPath}')`;
+                        const thumbPath = `./models/${tex.file}`;
+                        const fullPath = `./models/${tex.full}`;
+                        
+                        box.style.backgroundImage = `url('${thumbPath}')`;
                         box.onclick = () => {
-                            document.getElementById('modal-img').src = fullPath;
+                            document.getElementById('modal-img').src = fullPath; // Load full res only when clicked
                             document.getElementById('image-modal').style.display = 'flex';
                         };
                         let label = document.createElement("div");
@@ -231,22 +237,33 @@
                     scene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
                 });
 
-                // --- UI EVENT LISTENERS FOR LIGHTING ---
+                // --- UI EVENT LISTENERS ---
                 const stressSlider = document.getElementById("stressSlider");
                 const iblSlider = document.getElementById("iblSlider");
                 const expSlider = document.getElementById("expSlider");
+                const tonemapSelect = document.getElementById("tonemapSelect");
                 
                 const iblVal = document.getElementById("iblVal");
                 const expVal = document.getElementById("expVal");
 
-                // Update Environment Light Intensity dynamically
+                tonemapSelect.addEventListener("change", (e) => {
+                    if (e.target.value === "aces") {
+                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
+                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+                    } else if (e.target.value === "standard") {
+                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
+                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
+                    } else {
+                        scene.imageProcessingConfiguration.toneMappingEnabled = false;
+                    }
+                });
+
                 iblSlider.addEventListener("input", () => {
                     const val = parseFloat(iblSlider.value);
                     scene.environmentIntensity = val;
                     iblVal.innerText = val.toFixed(1);
                 });
 
-                // Update Tone Mapping Exposure dynamically
                 expSlider.addEventListener("input", () => {
                     const val = parseFloat(expSlider.value);
                     scene.imageProcessingConfiguration.exposure = val;
@@ -262,9 +279,10 @@
                     const stressLevel = parseFloat(stressSlider.value);
                     let colorLerpFactor = stressLevel > 0.33 ? (stressLevel - 0.33) / 0.67 : 0;
 
-                    const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
                     const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
-                    const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, colorLerpFactor);
+                    
+                    // Lerp starting from the actual native vagus color!
+                    const currentColor = BABYLON.Color3.Lerp(originalVagusColor, peakColor, colorLerpFactor);
 
                     stressLight.intensity = stressLevel * 0.5;
 
@@ -275,7 +293,7 @@
 
                     if (vagusMat) {
                         vagusMat.emissiveColor = currentColor;
-                        vagusMat.emissiveIntensity = 2.0 + (colorLerpFactor * 15.0); 
+                        vagusMat.emissiveIntensity = originalVagusIntensity + (colorLerpFactor * 15.0); 
                     }
                 });
 
