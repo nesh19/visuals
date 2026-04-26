@@ -1,0 +1,884 @@
+{
+    "asset" : {
+        "generator" : "Khronos glTF Blender I/O v1.7.33",
+        "version" : "2.0"
+    },
+    "extensionsUsed" : [
+        "KHR_draco_mesh_compression",
+        "KHR_materials_transmission",
+        "KHR_materials_ior",
+        "KHR_materials_volume"
+    ],
+    "extensionsRequired" : [
+        "KHR_draco_mesh_compression"
+    ],
+    "scene" : 0,
+    "scenes" : [
+        {
+            "name" : "Scene",
+            "nodes" : [
+                6
+            ]
+        }
+    ],
+    "nodes" : [
+        {
+            "mesh" : 0,
+            "name" : "mesh_body"
+        },
+        {
+            "mesh" : 1,
+            "name" : "mesh_brain"
+        },
+        {
+            "mesh" : 2,
+            "name" : "mesh_heart"
+        },
+        {
+            "mesh" : 3,
+            "name" : "mesh_lungs"
+        },
+        {
+            "mesh" : 4,
+            "name" : "mesh_mid_brain"
+        },
+        {
+            "mesh" : 5,
+            "name" : "mesh_trachea"
+        },
+        {
+            "children" : [
+                0,
+                1,
+                2,
+                3,
+                4,
+                5
+            ],
+            "name" : "body_torso"
+        }
+    ],
+    "animations" : [
+        {
+            "channels" : [
+                {
+                    "sampler" : 0,
+                    "target" : {
+                        "node" : 2,
+                        "path" : "weights"
+                    }
+                }
+            ],
+            "name" : "Anim_Heart_Loop",
+            "samplers" : [
+                {
+                    "input" : 35,
+                    "interpolation" : "LINEAR",
+                    "output" : 36
+                }
+            ]
+        },
+        {
+            "channels" : [
+                {
+                    "sampler" : 0,
+                    "target" : {
+                        "node" : 3,
+                        "path" : "weights"
+                    }
+                }
+            ],
+            "name" : "Lung_Expansion",
+            "samplers" : [
+                {
+                    "input" : 37,
+                    "interpolation" : "LINEAR",
+                    "output" : 38
+                }
+            ]
+        }
+    ],
+    "materials" : [
+        {
+            "alphaMode" : "BLEND",
+            "extensions" : {
+                "KHR_materials_transmission" : {
+                    "transmissionFactor" : 1
+                },
+                "KHR_materials_ior" : {
+                    "ior" : 1.100000023841858
+                },
+                "KHR_materials_volume" : {
+                    "thicknessFactor" : 0
+                }
+            },
+            "name" : "mat_body_glass",
+            "pbrMetallicRoughness" : {
+                "baseColorFactor" : [
+                    0.9671536684036255,
+                    0.9753053784370422,
+                    1,
+                    0.37727272510528564
+                ],
+                "metallicFactor" : 0.13181817531585693,
+                "roughnessFactor" : 0
+            }
+        },
+        {
+            "name" : "mat_organs_pbr",
+            "normalTexture" : {
+                "index" : 0
+            },
+            "occlusionTexture" : {
+                "index" : 1
+            },
+            "pbrMetallicRoughness" : {
+                "baseColorTexture" : {
+                    "index" : 2
+                },
+                "metallicRoughnessTexture" : {
+                    "index" : 1
+                }
+            }
+        },
+        {
+            "doubleSided" : true,
+            "extensions" : {
+                "KHR_materials_transmission" : {
+                    "transmissionFactor" : 0.26363635063171387
+                },
+                "KHR_materials_ior" : {
+                    "ior" : 1.4500000476837158
+                },
+                "KHR_materials_volume" : {
+                    "thicknessFactor" : 0
+                }
+            },
+            "name" : "mat_vagus_glow",
+            "pbrMetallicRoughness" : {
+                "baseColorFactor" : [
+                    1,
+                    1,
+                    0.8468736410140991,
+                    1
+                ],
+                "metallicFactor" : 0.41818180680274963,
+                "roughnessFactor" : 0.22096821665763855
+            }
+        }
+    ],
+    "meshes" : [
+        {
+            "name" : "mesh_body",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 0,
+                        "NORMAL" : 1,
+                        "TEXCOORD_0" : 2
+                    },
+                    "extensions" : {
+                        "KHR_draco_mesh_compression" : {
+                            "bufferView" : 0,
+                            "attributes" : {
+                                "POSITION" : 0,
+                                "NORMAL" : 1,
+                                "TEXCOORD_0" : 2
+                            }
+                        }
+                    },
+                    "indices" : 3,
+                    "material" : 0,
+                    "mode" : 4
+                }
+            ]
+        },
+        {
+            "name" : "mesh_brain",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 4,
+                        "NORMAL" : 5,
+                        "TEXCOORD_0" : 6
+                    },
+                    "extensions" : {
+                        "KHR_draco_mesh_compression" : {
+                            "bufferView" : 1,
+                            "attributes" : {
+                                "POSITION" : 0,
+                                "NORMAL" : 1,
+                                "TEXCOORD_0" : 2
+                            }
+                        }
+                    },
+                    "indices" : 7,
+                    "material" : 1,
+                    "mode" : 4
+                }
+            ]
+        },
+        {
+            "extras" : {
+                "targetNames" : [
+                    "Systole_01",
+                    "Systole_02",
+                    "Systole_03"
+                ]
+            },
+            "name" : "mesh_heart",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 8,
+                        "NORMAL" : 9,
+                        "TEXCOORD_0" : 10
+                    },
+                    "extensions" : {
+                        "KHR_draco_mesh_compression" : {
+                            "bufferView" : 2,
+                            "attributes" : {
+                                "POSITION" : 0,
+                                "NORMAL" : 1,
+                                "TEXCOORD_0" : 2
+                            }
+                        }
+                    },
+                    "indices" : 11,
+                    "material" : 1,
+                    "mode" : 4,
+                    "targets" : [
+                        {
+                            "POSITION" : 12
+                        },
+                        {
+                            "POSITION" : 13
+                        },
+                        {
+                            "POSITION" : 14
+                        }
+                    ]
+                },
+                {
+                    "attributes" : {
+                        "POSITION" : 15,
+                        "NORMAL" : 16,
+                        "TEXCOORD_0" : 17
+                    },
+                    "extensions" : {
+                        "KHR_draco_mesh_compression" : {
+                            "bufferView" : 6,
+                            "attributes" : {
+                                "POSITION" : 0,
+                                "NORMAL" : 1,
+                                "TEXCOORD_0" : 2
+                            }
+                        }
+                    },
+                    "indices" : 18,
+                    "material" : 2,
+                    "mode" : 4,
+                    "targets" : [
+                        {
+                            "POSITION" : 19
+                        },
+                        {
+                            "POSITION" : 20
+                        },
+                        {
+                            "POSITION" : 21
+                        }
+                    ]
+                }
+            ],
+            "weights" : [
+                0,
+                0,
+                0
+            ]
+        },
+        {
+            "extras" : {
+                "targetNames" : [
+                    "Lung_Expansion"
+                ]
+            },
+            "name" : "mesh_lungs",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 22,
+                        "NORMAL" : 23,
+                        "TEXCOORD_0" : 24
+                    },
+                    "extensions" : {
+                        "KHR_draco_mesh_compression" : {
+                            "bufferView" : 10,
+                            "attributes" : {
+                                "POSITION" : 0,
+                                "NORMAL" : 1,
+                                "TEXCOORD_0" : 2
+                            }
+                        }
+                    },
+                    "indices" : 25,
+                    "material" : 1,
+                    "mode" : 4,
+                    "targets" : [
+                        {
+                            "POSITION" : 26
+                        }
+                    ]
+                }
+            ],
+            "weights" : [
+                0
+            ]
+        },
+        {
+            "name" : "mesh_mid_brain",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 27,
+                        "NORMAL" : 28,
+                        "TEXCOORD_0" : 29
+                    },
+                    "extensions" : {
+                        "KHR_draco_mesh_compression" : {
+                            "bufferView" : 12,
+                            "attributes" : {
+                                "POSITION" : 0,
+                                "NORMAL" : 1,
+                                "TEXCOORD_0" : 2
+                            }
+                        }
+                    },
+                    "indices" : 30,
+                    "material" : 1,
+                    "mode" : 4
+                }
+            ]
+        },
+        {
+            "name" : "mesh_trachea",
+            "primitives" : [
+                {
+                    "attributes" : {
+                        "POSITION" : 31,
+                        "NORMAL" : 32,
+                        "TEXCOORD_0" : 33
+                    },
+                    "extensions" : {
+                        "KHR_draco_mesh_compression" : {
+                            "bufferView" : 13,
+                            "attributes" : {
+                                "POSITION" : 0,
+                                "NORMAL" : 1,
+                                "TEXCOORD_0" : 2
+                            }
+                        }
+                    },
+                    "indices" : 34,
+                    "material" : 1,
+                    "mode" : 4
+                }
+            ]
+        }
+    ],
+    "textures" : [
+        {
+            "sampler" : 0,
+            "source" : 0
+        },
+        {
+            "sampler" : 0,
+            "source" : 1
+        },
+        {
+            "sampler" : 0,
+            "source" : 2
+        }
+    ],
+    "images" : [
+        {
+            "mimeType" : "image/jpeg",
+            "name" : "body_normal",
+            "uri" : "body_normal.jpg"
+        },
+        {
+            "mimeType" : "image/jpeg",
+            "name" : "body_occlusionRoughnessMetallic",
+            "uri" : "body_occlusionRoughnessMetallic.jpg"
+        },
+        {
+            "mimeType" : "image/jpeg",
+            "name" : "body_baseColor",
+            "uri" : "body_baseColor.jpg"
+        }
+    ],
+    "accessors" : [
+        {
+            "componentType" : 5126,
+            "count" : 1572,
+            "max" : [
+                2.2867003281135112e-05,
+                0.31086814403533936,
+                0.1284460425376892
+            ],
+            "min" : [
+                -0.19908347725868225,
+                -0.31086814403533936,
+                -0.12512414157390594
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 1572,
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 1572,
+            "type" : "VEC2"
+        },
+        {
+            "componentType" : 5123,
+            "count" : 8352,
+            "type" : "SCALAR"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 1365,
+            "max" : [
+                0.0008775070309638977,
+                0.30197077989578247,
+                0.09207020699977875
+            ],
+            "min" : [
+                -0.07299044728279114,
+                0.1878442019224167,
+                -0.08776802569627762
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 1365,
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 1365,
+            "type" : "VEC2"
+        },
+        {
+            "componentType" : 5123,
+            "count" : 7602,
+            "type" : "SCALAR"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 5216,
+            "max" : [
+                0.07511768490076065,
+                -0.07329339534044266,
+                0.09617555141448975
+            ],
+            "min" : [
+                -0.031130578368902206,
+                -0.20366698503494263,
+                0.015665680170059204
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 5216,
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 5216,
+            "type" : "VEC2"
+        },
+        {
+            "componentType" : 5123,
+            "count" : 27216,
+            "type" : "SCALAR"
+        },
+        {
+            "bufferView" : 3,
+            "componentType" : 5126,
+            "count" : 5216,
+            "max" : [
+                0.00057973712682724,
+                0.003961503505706787,
+                0
+            ],
+            "min" : [
+                -0.00434931181371212,
+                0,
+                0
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 4,
+            "componentType" : 5126,
+            "count" : 5216,
+            "max" : [
+                0.0020705461502075195,
+                0.004280604422092438,
+                0
+            ],
+            "min" : [
+                -0.003969356417655945,
+                -0.0004937350749969482,
+                0
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 5,
+            "componentType" : 5126,
+            "count" : 5216,
+            "max" : [
+                0.0039095692336559296,
+                0.008929580450057983,
+                0
+            ],
+            "min" : [
+                -0.00992313027381897,
+                -0.00011824071407318115,
+                0
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 2272,
+            "max" : [
+                0.06776483356952667,
+                0.2133476734161377,
+                0.09711223840713501
+            ],
+            "min" : [
+                -0.0013899337500333786,
+                -0.19196203351020813,
+                -0.02650773525238037
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 2272,
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 2272,
+            "type" : "VEC2"
+        },
+        {
+            "componentType" : 5123,
+            "count" : 6492,
+            "type" : "SCALAR"
+        },
+        {
+            "bufferView" : 7,
+            "componentType" : 5126,
+            "count" : 2272,
+            "max" : [
+                0.0003674738109111786,
+                0.003461182117462158,
+                0
+            ],
+            "min" : [
+                -0.0016289176419377327,
+                0,
+                0
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 8,
+            "componentType" : 5126,
+            "count" : 2272,
+            "max" : [
+                0.001349572092294693,
+                0.002570420503616333,
+                0
+            ],
+            "min" : [
+                -0.0039706751704216,
+                -0.0002844184637069702,
+                0
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "bufferView" : 9,
+            "componentType" : 5126,
+            "count" : 2272,
+            "max" : [
+                0.003859015181660652,
+                0.007504642009735107,
+                0
+            ],
+            "min" : [
+                -0.008952051401138306,
+                -0.00014452636241912842,
+                0
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 1358,
+            "max" : [
+                0.12000832706689835,
+                -0.007174226921051741,
+                0.07743276655673981
+            ],
+            "min" : [
+                -0.12293878942728043,
+                -0.21728958189487457,
+                -0.07271142303943634
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 1358,
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 1358,
+            "type" : "VEC2"
+        },
+        {
+            "componentType" : 5123,
+            "count" : 7404,
+            "type" : "SCALAR"
+        },
+        {
+            "bufferView" : 11,
+            "componentType" : 5126,
+            "count" : 1358,
+            "max" : [
+                0.01851259171962738,
+                0.0396554209291935,
+                0.01253817230463028
+            ],
+            "min" : [
+                -0.006843455135822296,
+                -0.01352141797542572,
+                -0.028139453381299973
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 2264,
+            "max" : [
+                0.046263016760349274,
+                0.2615336775779724,
+                0.04510831460356712
+            ],
+            "min" : [
+                -0.04398392513394356,
+                0.15119200944900513,
+                -0.030044810846447945
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 2264,
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 2264,
+            "type" : "VEC2"
+        },
+        {
+            "componentType" : 5123,
+            "count" : 12213,
+            "type" : "SCALAR"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 453,
+            "max" : [
+                0.025977211073040962,
+                0.07397256046533585,
+                0.002525927731767297
+            ],
+            "min" : [
+                -0.03162268549203873,
+                -0.054914504289627075,
+                -0.026289045810699463
+            ],
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 453,
+            "type" : "VEC3"
+        },
+        {
+            "componentType" : 5126,
+            "count" : 453,
+            "type" : "VEC2"
+        },
+        {
+            "componentType" : 5123,
+            "count" : 2196,
+            "type" : "SCALAR"
+        },
+        {
+            "bufferView" : 14,
+            "componentType" : 5126,
+            "count" : 31,
+            "max" : [
+                1
+            ],
+            "min" : [
+                0
+            ],
+            "type" : "SCALAR"
+        },
+        {
+            "bufferView" : 15,
+            "componentType" : 5126,
+            "count" : 93,
+            "type" : "SCALAR"
+        },
+        {
+            "bufferView" : 16,
+            "componentType" : 5126,
+            "count" : 150,
+            "max" : [
+                5
+            ],
+            "min" : [
+                0.03333333333333333
+            ],
+            "type" : "SCALAR"
+        },
+        {
+            "bufferView" : 17,
+            "componentType" : 5126,
+            "count" : 150,
+            "type" : "SCALAR"
+        }
+    ],
+    "bufferViews" : [
+        {
+            "buffer" : 0,
+            "byteLength" : 11913,
+            "byteOffset" : 0
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 11769,
+            "byteOffset" : 11916
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 96804,
+            "byteOffset" : 23688
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 62592,
+            "byteOffset" : 120492
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 62592,
+            "byteOffset" : 183084
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 62592,
+            "byteOffset" : 245676
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 25224,
+            "byteOffset" : 308268
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 27264,
+            "byteOffset" : 333492
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 27264,
+            "byteOffset" : 360756
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 27264,
+            "byteOffset" : 388020
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 27204,
+            "byteOffset" : 415284
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 16296,
+            "byteOffset" : 442488
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 18262,
+            "byteOffset" : 458784
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 4012,
+            "byteOffset" : 477048
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 124,
+            "byteOffset" : 481060
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 372,
+            "byteOffset" : 481184
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 600,
+            "byteOffset" : 481556
+        },
+        {
+            "buffer" : 0,
+            "byteLength" : 600,
+            "byteOffset" : 482156
+        }
+    ],
+    "samplers" : [
+        {
+            "magFilter" : 9729,
+            "minFilter" : 9987
+        }
+    ],
+    "buffers" : [
+        {
+            "byteLength" : 482756,
+            "uri" : "human_stress_v01.bin"
+        }
+    ]
+}
