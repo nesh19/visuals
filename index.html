@@ -124,8 +124,10 @@
             viewer.onSceneInitObservable.add(function(scene) {
                 scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); 
                 
-                scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://playground.babylonjs.com/textures/environment.env", scene);
-                scene.environmentIntensity = 1.0; 
+                // --- UPDATE: STUDIO ENVIRONMENT MAP ---
+                scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
+                // Increased intensity slightly to make the studio reflections pop
+                scene.environmentIntensity = 1.2; 
 
                 const engine = viewer.engine;
                 const slider = document.getElementById("stressSlider");
@@ -141,26 +143,30 @@
                     
                     if (!isInitialized && scene.meshes.length > 1 && scene.materials.length > 0) {
                         
-                        // --- FIX 1: LOWER INITIAL LIGHT INTENSITY ---
                         const mainLight = scene.lights[0];
                         if (mainLight) {
-                            mainLight.intensity = 0.5; // Lowered from 1.0 so AO isn't washed out
+                            mainLight.intensity = 0.5; 
                         }
 
-                        // --- FIX 2: FORCE CONNECT AO MAP ---
+                        // --- THE ULTIMATE AO OVERRIDE ---
                         scene.materials.forEach(mat => {
                             if (mat instanceof BABYLON.PBRMaterial) {
                                 
-                                // If the ORM is loaded, but Ambient is missing, manually copy the reference over!
-                                if (mat.metallicTexture && !mat.ambientTexture) {
+                                if (mat.metallicTexture) {
+                                    // 1. Force the Ambient slot to use the ORM map
                                     mat.ambientTexture = mat.metallicTexture;
+                                    
+                                    // 2. Tell it the red channel is the AO
                                     mat.useAmbientOcclusionFromMetallicTextureRed = true;
-                                }
-
-                                // Now that we guarantee the Ambient texture exists, boost its shadow power
-                                if (mat.ambientTexture) {
-                                    mat.ambientTextureStrength = 3.0; // Pushes the contrast
-                                    mat.ambientTextureImpactOnAnalyticalLights = 1.0; // Forces shadows over direct light
+                                    
+                                    // 3. Make the shadow dark
+                                    mat.ambientTextureStrength = 2.0; 
+                                    
+                                    // 4. Force the shadow to draw over direct lights
+                                    mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
+                                    
+                                    // 5. Force the shadow to block the studio environment reflections
+                                    mat.ambientTextureImpactOnEnvironment = 1.0;
                                 }
                             }
                         });
@@ -235,7 +241,6 @@
                         const mainLight = scene.lights[0];
                         if (mainLight && mainLight.diffuse) {
                             const lightStress = stressLevel * 0.3; 
-                            // Since base is now 0.5, we scale down to roughly 0.2 at max stress
                             mainLight.intensity = 0.5 - (lightStress * 0.8); 
                             mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - lightStress, 1.0 - lightStress); 
                         }
