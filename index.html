@@ -8,10 +8,12 @@
     <script src="https://cdn.babylonjs.com/viewer/babylon.viewer.js"></script>
     
     <style>
+        /* THE VIGNETTE GRADIANT (Light Cool-Gray to Edge Dark) - Matches Reference image_8.png */
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
-            background: radial-gradient(circle, #333333 0%, #000000 100%); 
+            background: radial-gradient(circle, #BBBBBB 0%, #555555 100%); 
         }
+        
         babylon { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; z-index: 1; }
         
         #ui-panel { 
@@ -35,9 +37,13 @@
         .tex-box { 
             width: 55px; height: 55px; border: 1px solid #444; background-color: #1a1a1a; 
             border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center;
+            /* Restoring image preview styles */
+            background-size: cover; background-position: center;
         }
         .tex-label {
-            font-size: 9px; color: #888; text-align: center; width: 100%; word-wrap: break-word; padding: 2px;
+            position: absolute; bottom: 0; left: 0; width: 100%; text-align: center;
+            font-size: 9px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            background: rgba(0,0,0,0.7); padding: 2px;
         }
     </style>
 </head>
@@ -59,7 +65,7 @@
 
     <div id="tex-gallery"></div>
 
-    <babylon id="myViewer" model="./models/human_stress_v01.glb" extends="minimal"></babylon>
+    <babylon id="myViewer" model="./models/human_stress_v01.gltf" extends="minimal"></babylon>
 
     <script>
         BabylonViewer.viewerManager.getViewerPromiseById('myViewer').then(function(viewer) {
@@ -72,22 +78,22 @@
                 const scene = viewer.sceneManager.scene;
                 const engine = viewer.engine;
                 
-                // Get the Viewer's default main light instead of making a new one
                 const mainLight = scene.lights[0]; 
-                scene.environmentIntensity = 0.5; // Start dim
+                scene.environmentIntensity = 0.5; 
                 
                 const instrumentation = new BABYLON.SceneInstrumentation(scene);
                 instrumentation.captureDrawCalls = true;
 
-                const heart = scene.getMeshByName("mesh_heart");
-                const vagus = scene.getMeshByName("mesh_vagus");
                 const slider = document.getElementById("stressSlider");
+                const vagusMat = scene.materials.find(m => m.name.toLowerCase().includes("vagus_glow"));
 
-                fetch("./models/human_stress_v01.glb").then(response => {
+                // Dynamic File Size (Fetch request is just for the .gltf file) fetch URL update needed
+                fetch("./models/human_stress_v01.gltf").then(response => {
                     const size = response.headers.get("content-length");
                     if(size) document.getElementById("fileSize").innerText = (size / (1024 * 1024)).toFixed(2) + " MB";
                 }).catch(() => document.getElementById("fileSize").innerText = "Unknown");
 
+                // Total Geometry (Calculated safely)
                 let totalTris = 0;
                 let totalVerts = 0;
                 scene.meshes.forEach(m => {
@@ -98,7 +104,7 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                // Texture Fix: Displaying names instead of broken internal URLs
+                // EXACT TEXTURE TARGETING: mat_organs
                 const gallery = document.getElementById("tex-gallery");
                 const organMat = scene.materials.find(m => m.name.toLowerCase().includes("organ"));
                 
@@ -108,18 +114,18 @@
                         let box = document.createElement("div");
                         box.className = "tex-box";
                         
+                        // FIX 2: RestoringPreviews. With separated files, t.url is a real PNG/JPG file path the browser can load.
+                        const texUrl = t.url || t.name;
+                        box.style.backgroundImage = `url('${texUrl}')`;
+                        
                         let label = document.createElement("div");
                         label.className = "tex-label";
                         
-                        // Clean up the name for the UI
+                        // Cleanup the filename for the UI
                         let tName = t.name.split('/').pop();
-                        if (tName.length > 15 || tName.startsWith("data:") || tName.startsWith("blob:")) {
-                            tName = "Map " + (index + 1);
-                        } else {
-                            tName = tName.substring(0, 10);
-                        }
+                        // This removes the blob checks. With separate files, they will have names.
+                        label.innerText = tName.substring(0, 10);
                         
-                        label.innerText = tName;
                         box.appendChild(label);
                         gallery.appendChild(box);
                     });
@@ -134,25 +140,22 @@
                     document.getElementById("fps").innerText = engine.getFps().toFixed();
                     document.getElementById("drawCalls").innerText = instrumentation.drawCallsCounter.current;
                     
-                    // LIGHTING LOGIC: Decrease intensity and fade to Dark Red
+                    // Stress Color Logic
+                    const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
+                    const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
+                    const currentColor = BABYLON.Color3.Lerp(calmColor, peakColor, stressLevel);
+
                     if (mainLight) {
-                        mainLight.intensity = 1.0 - (stressLevel * 0.7); // Gets darker
-                        mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - stressLevel, 1.0 - stressLevel); // Turns red
+                        mainLight.intensity = 1.0 - (stressLevel * 0.7); 
+                        mainLight.diffuse = new BABYLON.Color3(1.0, 1.0 - stressLevel, 1.0 - stressLevel); 
                     }
 
-                    // VAGUS ANIMATION: Force mathematical pulse
-                    const speed = 1.0 + (stressLevel * 3.0); // Faster max speed
+                    const speed = 1.0 + (stressLevel * 3.0); 
                     scene.animationGroups.forEach(anim => anim.speedRatio = speed);
 
-                    if(vagus && vagus.morphTargetManager && vagus.morphTargetManager.getTarget(0)) {
-                        const mathPulse = (Math.sin(Date.now() * 0.005 * speed) + 1) / 2;
-                        vagus.morphTargetManager.getTarget(0).influence = mathPulse;
-                    }
-
-                    // VAGUS INTENSE RED GLOW
-                    if(vagus && vagus.material) {
-                        vagus.material.emissiveColor = new BABYLON.Color3(0.8, 0.0, 0.0); // Pure dark red base
-                        vagus.material.emissiveIntensity = 1.0 + (stressLevel * 15.0); // Massive intensity jump
+                    if(vagusMat) {
+                        vagusMat.emissiveColor = currentColor;
+                        vagusMat.emissiveIntensity = 2.0 + (stressLevel * 15.0); 
                     }
                 });
             });
