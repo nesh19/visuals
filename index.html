@@ -11,8 +11,8 @@
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white;
-            /* Darker, professional vignette background */
-            background: radial-gradient(circle, #3a3a3a 0%, #0a0a0a 100%); 
+            /* Light gray center to dark gray edges vignette */
+            background: radial-gradient(circle, #888888 0%, #222222 100%); 
             touch-action: none; 
         }
         #renderCanvas { width: 100%; height: 100%; display: block; z-index: 1; position: absolute; outline: none; background: transparent; }
@@ -147,38 +147,55 @@
             // Base Image Processing
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-            // Contrast/Exposure adjustments kept intact from your tweaks
-            scene.imageProcessingConfiguration.exposure = 1;
-            scene.imageProcessingConfiguration.contrast = 1;
+            scene.imageProcessingConfiguration.exposure = 1.3;
+            scene.imageProcessingConfiguration.contrast = 1.2;
 
             // --- CAMERA FIXES ---
-            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 3.5, BABYLON.Vector3.Zero(), scene);
+            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 5, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
-            camera.wheelPrecision = 150; // Smooth scroll
+            camera.wheelPrecision = 100;
             
-            // Prevents slicing the model and going inside it
+            // Stops zooming through model
             camera.minZ = 0.01; 
-            camera.lowerRadiusLimit = 0.5; // Change to 2.0 if you still push too close
-            camera.upperRadiusLimit = 2;
+            camera.lowerRadiusLimit = 1.8; 
+            camera.upperRadiusLimit = 20.0;
 
-            // Pure Environment IBL
+            // --- LIGHTING ---
+            // 1. Environment IBL
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-            scene.environmentIntensity = 1.2;
+            scene.environmentIntensity = 1.0;
 
+            // 2. Extra Fill Light (New)
+            const extraLight = new BABYLON.HemisphericLight("extraLight", new BABYLON.Vector3(0, 1, 0), scene);
+            extraLight.intensity = 0.3; // Kept low to not kill shadows
+            extraLight.groundColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+
+            // 3. Stress Directional Light
             const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
             stressLight.position = new BABYLON.Vector3(20, 40, 20);
             stressLight.diffuse = new BABYLON.Color3(1.0, 0.0, 0.0); 
-            stressLight.intensity = 1.5; 
+            stressLight.intensity = 0.0; 
 
             try {
                 await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.gltf", scene);
                 
-                // Calculates the true center of the geometry to fix the "too far" offset
+                // Calculates the true center of the geometry
                 const worldExtends = scene.getWorldExtends();
                 const center = worldExtends.min.add(worldExtends.max).scale(0.5);
                 camera.setTarget(center);
 
-                // Re-Assert Ambient Occlusion Mapping
+                // Auto-Framing prevents the "too far" look initially
+                scene.executeWhenReady(() => {
+                    camera.useFramingBehavior = true;
+                    const framingBehavior = camera.getBehaviorByName("Framing");
+                    if (framingBehavior) {
+                        framingBehavior.framingTime = 0; // Instant snap
+                        framingBehavior.elevationReturnTime = -1;
+                        framingBehavior.zoomOnMeshesHierarchy(scene.meshes);
+                    }
+                });
+
+                // Ambient Occlusion Mapping
                 scene.materials.forEach(mat => {
                     if (mat instanceof BABYLON.PBRMaterial) {
                         const matName = mat.name ? mat.name.toLowerCase() : "";
@@ -186,7 +203,8 @@
                             if (mat.metallicTexture) {
                                 mat.ambientTexture = mat.metallicTexture;
                                 mat.useAmbientOcclusionFromMetallicTextureRed = true;
-                                mat.ambientTextureStrength = 1.0; 
+                                mat.ambientTextureStrength = 1.0; // Fixed at 1.0 limit
+                                mat.ambientTextureImpactOnAnalyticalLights = 1.0; // Keeps AO intact under our extra light
                                 mat.markDirty();
                             }
                         }
@@ -197,7 +215,7 @@
                     scene.animationGroups.forEach(anim => anim.play(true));
                 }
 
-                // Stats Panel Calculations
+                // Stats Panel
                 let totalTris = 0;
                 let totalVerts = 0;
                 scene.meshes.forEach(m => {
@@ -208,7 +226,6 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                // Smart Ping for File Size (No Double Download)
                 const filesToSize = [
                     "./models/human_stress_v01.bin",
                     "./models/body_baseColor.jpg",
@@ -228,8 +245,15 @@
                     }
                 });
 
-                // Setup Vagus Reference
+                // Vagus Setup & Original Material Capture
                 let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
+                let originalVagusColor = new BABYLON.Color3(0, 0, 0);
+                let originalVagusIntensity = 1.0;
+
+                if (vagusMat) {
+                    if (vagusMat.emissiveColor) originalVagusColor = vagusMat.emissiveColor.clone();
+                    if (vagusMat.emissiveIntensity !== undefined) originalVagusIntensity = vagusMat.emissiveIntensity;
+                }
 
                 // Texture Gallery Builder
                 const gallery = document.getElementById("tex-gallery");
@@ -256,7 +280,7 @@
                     gallery.appendChild(box);
                 });
 
-                // Wireframe Button Logic
+                // Wireframe Logic
                 const wireframeBtn = document.getElementById("wireframe-btn");
                 let isWireframe = false;
                 wireframeBtn.addEventListener("click", () => {
@@ -266,7 +290,7 @@
                     scene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
                 });
 
-                // UI Lighting / Tone Mapping Logic
+                // UI Lighting Controls
                 const tonemapSelect = document.getElementById("tonemapSelect");
                 const iblSlider = document.getElementById("iblSlider");
                 const iblVal = document.getElementById("iblVal");
@@ -299,22 +323,18 @@
                     
                     const stressLevel = parseFloat(slider.value);
 
-                    stressLight.intensity = stressLevel * 0.5;
+                    stressLight.intensity = stressLevel * 0.8; // Adjusted multiplier so it's zero when slider is at zero
 
                     if (scene.animationGroups) {
                         const speed = 1.0 + (stressLevel * 3.0); 
                         scene.animationGroups.forEach(anim => anim.speedRatio = speed);
                     }
 
+                    // Vagus Material Lerp from Native to Pure Red
                     if (vagusMat) {
-                        if (stressLevel > 0) {
-                            const calmColor = new BABYLON.Color3(0.1, 0.3, 1.0); 
-                            const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); 
-                            vagusMat.emissiveColor = BABYLON.Color3.Lerp(calmColor, peakColor, stressLevel);
-                            vagusMat.emissiveIntensity = 2.0 + (stressLevel * 15.0); 
-                        } else {
-                            vagusMat.emissiveIntensity = 0;
-                        }
+                        const peakColor = new BABYLON.Color3(0.8, 0.0, 0.0); // Zero Blue
+                        vagusMat.emissiveColor = BABYLON.Color3.Lerp(originalVagusColor, peakColor, stressLevel);
+                        vagusMat.emissiveIntensity = originalVagusIntensity + (stressLevel * 15.0); 
                     }
                 });
 
