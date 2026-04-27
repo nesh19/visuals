@@ -148,8 +148,8 @@
             scene.imageProcessingConfiguration.toneMappingEnabled = true;
             scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
             // Contrast/Exposure adjustments kept intact from your tweaks
-            scene.imageProcessingConfiguration.exposure = 1.3;
-            scene.imageProcessingConfiguration.contrast = 1.2;
+            scene.imageProcessingConfiguration.exposure = 1;
+            scene.imageProcessingConfiguration.contrast = 1;
 
             // --- CAMERA FIXES ---
             const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 3.5, BABYLON.Vector3.Zero(), scene);
@@ -158,8 +158,8 @@
             
             // Prevents slicing the model and going inside it
             camera.minZ = 0.01; 
-            camera.lowerRadiusLimit = 1.8; // Change to 2.0 if you still push too close
-            camera.upperRadiusLimit = 15.0;
+            camera.lowerRadiusLimit = 1; // Change to 2.0 if you still push too close
+            camera.upperRadiusLimit = 1;
 
             // Pure Environment IBL
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
@@ -186,7 +186,7 @@
                             if (mat.metallicTexture) {
                                 mat.ambientTexture = mat.metallicTexture;
                                 mat.useAmbientOcclusionFromMetallicTextureRed = true;
-                                mat.ambientTextureStrength = 2.0; 
+                                mat.ambientTextureStrength = 1.0; 
                                 mat.markDirty();
                             }
                         }
