@@ -144,7 +144,7 @@
 
             // Environment lighting
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-            scene.environmentIntensity = 1.0;
+            scene.environmentIntensity = 1.5;
 
             // Red Stress Light
             const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
@@ -166,7 +166,7 @@
                         const matName = mat.name ? mat.name.toLowerCase() : "";
                         if (!matName.includes("vagus") && !matName.includes("glass")) {
                             // Tells the engine to multiply the AO effect heavily
-                            mat.ambientTextureStrength = 2.0; 
+                            mat.ambientTextureStrength = 1.0; 
                         }
                     }
                 });
