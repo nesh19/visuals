@@ -11,7 +11,391 @@
     <style>
         body { 
             margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white; height: 100vh; width: 100vw;
+            background: radial-gradient(circle, #3a3a3a 0%, #0a0a0a 100%)<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Technical Artist Portfolio | nesh19</title>
+    
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    
+    <style>
+        body { 
+            margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white; height: 100vh; width: 100vw;
             background: radial-gradient(circle, #3a3a3a 0%, #0a0a0a 100%); 
+            touch-action: none; 
+        }
+        #renderCanvas { width: 100%; height: 100%; display: block; z-index: 1; position: absolute; outline: none; background: transparent; }
+        
+        #loading-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; z-index: 9999; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: #00ff00;
+            font-size: 16px; letter-spacing: 2px;
+        }
+
+        #ui-toggle-btn {
+            position: absolute; top: 20px; right: 20px; z-index: 10;
+            background: rgba(0,0,0,0.8); border: 1px solid #444; border-radius: 8px;
+            color: #aaa; padding: 10px 15px; font-family: 'Consolas', monospace; font-size: 11px;
+            cursor: pointer; transition: all 0.2s ease; letter-spacing: 1px;
+        }
+        #ui-toggle-btn:hover { color: #fff; border-color: #888; }
+
+        #left-container {
+            position: absolute; top: 20px; left: 20px; z-index: 5;
+            display: flex; flex-direction: column; gap: 15px; pointer-events: none; width: 90%; max-width: 250px;
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
+        }
+
+        #ui-panel { 
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            background: rgba(15, 15, 15, 0.85); padding: 20px; border-radius: 10px; 
+            border: 1px solid #444; width: 90%; max-width: 320px; text-align: center; z-index: 5; backdrop-filter: blur(5px);
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
+        }
+
+        #left-container.hidden { transform: translateX(-150%) !important; opacity: 0; pointer-events: none; }
+        #ui-panel.hidden { transform: translate(-50%, 150%) !important; opacity: 0; pointer-events: none; }
+
+        .panel-box { background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; pointer-events: auto; }
+        
+        #stats-panel { border-left: 3px solid #00ff00; font-size: 12px; line-height: 1.5; }
+        .stat-val { color: #00ff00; font-weight: bold; }
+
+        #tex-gallery { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; pointer-events: auto;}
+        .tex-box { 
+            width: 60px; height: 60px; border: 1px solid #444; background-color: #1a1a1a; 
+            border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center;
+            background-size: cover; background-position: center; cursor: pointer;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+        .tex-box:hover { border-color: #fff; transform: scale(1.05); }
+        .tex-label {
+            position: absolute; bottom: 0; left: 0; width: 100%; text-align: center;
+            font-size: 8px; color: #ddd; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            background: rgba(0,0,0,0.8); padding: 3px 0;
+        }
+
+        .slider-group { margin-top: 15px; text-align: left; }
+        .slider-label { font-size: 10px; color: #aaa; letter-spacing: 1px; display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .slider-val { color: #00ff00; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #ff4d4d; }
+        select { width: 100%; background: #222; color: white; border: 1px solid #555; padding: 6px; font-family: 'Consolas', monospace; border-radius: 4px; cursor: pointer; font-size: 11px;}
+        
+        #iblSlider { accent-color: #4da6ff; }
+
+        #wireframe-btn {
+            width: 100%; margin-top: 15px; padding: 8px; cursor: pointer;
+            background: #222; color: #aaa; border: 1px solid #555;
+            border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px;
+            letter-spacing: 1px; transition: all 0.2s ease;
+        }
+        #wireframe-btn:hover { background: #444; color: #fff; border-color: #888; }
+
+        #image-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95); z-index: 99999;
+            justify-content: center; align-items: center; flex-direction: column;
+            cursor: pointer; backdrop-filter: blur(5px); pointer-events: auto;
+        }
+        #modal-img { max-width: 90vw; max-height: 80vh; border: 2px solid #555; border-radius: 8px; object-fit: contain; }
+        
+        #crash-screen {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(200, 0, 0, 0.9); padding: 30px; border: 2px solid white; z-index: 9999;
+            font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
+        }
+
+        @media (max-width: 768px) {
+            #left-container { 
+                top: 10px; left: 10px; 
+                transform: scale(0.75); transform-origin: top left;
+                width: calc(100% / 0.75 - 26px);
+                flex-direction: row; flex-wrap: wrap; justify-content: space-between; 
+            }
+            #left-container.hidden { transform: translateX(-150%) scale(0.75) !important; }
+            #ui-panel { 
+                bottom: 15px; padding: 15px; 
+                transform: translateX(-50%) scale(0.75); transform-origin: bottom center;
+                width: calc(90% / 0.75);
+            }
+            #ui-panel.hidden { transform: translate(-50%, 150%) scale(0.75) !important; }
+            #stats-panel, #lighting-controls { width: 100%; box-sizing: border-box; }
+            #tex-gallery { width: 100%; box-sizing: border-box; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loading-screen">
+        <div>LOADING GEOMETRY & TEXTURES...</div>
+        <div style="font-size: 10px; color: #aaa; margin-top: 10px;">Please wait</div>
+    </div>
+
+    <div id="crash-screen">
+        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
+        <p id="crash-log">Check your models folder. Are filenames case-sensitive?</p>
+    </div>
+
+    <button id="ui-toggle-btn">HIDE UI</button>
+
+    <div id="image-modal" onclick="this.style.display='none'">
+        <img id="modal-img" src="" alt="Texture Preview">
+        <div style="margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px;">CLICK ANYWHERE TO CLOSE</div>
+    </div>
+
+    <div id="left-container">
+        <div id="stats-panel" class="panel-box">
+            <strong>STATISTICS</strong><br>
+            FPS: <span id="fps" class="stat-val">0</span><br>
+            Total Tris: <span id="tris" class="stat-val">0</span><br>
+            Total Verts: <span id="verts" class="stat-val">0</span><br>
+            Total Size: <span id="fileSize" class="stat-val">Calculating...</span>
+        </div>
+        
+        <div id="tex-gallery"></div>
+
+        <div id="lighting-controls" class="panel-box" style="border-left: 3px solid #4da6ff;">
+            <div class="slider-group" style="margin-top: 0;">
+                <div class="slider-label">TONEMAPPING</div>
+                <select id="tonemapSelect">
+                    <option value="aces">ACES (Cinematic)</option>
+                    <option value="standard">Standard (Filmic)</option>
+                    <option value="none" selected>None (Linear)</option>
+                </select>
+            </div>
+            <div class="slider-group" style="margin-top: 12px;">
+                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.0</span></div>
+                <input type="range" id="iblSlider" min="0" max="3" step="0.1" value="1.0">
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-panel">
+        <div class="slider-group" style="margin-top: 0;">
+            <div class="slider-label" style="justify-content: center;"><span>CORTISOL / STRESS</span></div>
+            <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+        </div>
+        <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
+    </div>
+
+    <canvas id="renderCanvas"></canvas>
+
+    <script>
+        const uiToggleBtn = document.getElementById("ui-toggle-btn");
+        const leftContainer = document.getElementById("left-container");
+        const uiPanel = document.getElementById("ui-panel");
+        let uiVisible = true;
+
+        uiToggleBtn.addEventListener("click", () => {
+            uiVisible = !uiVisible;
+            if(uiVisible) {
+                leftContainer.classList.remove("hidden");
+                uiPanel.classList.remove("hidden");
+                uiToggleBtn.innerText = "HIDE UI";
+            } else {
+                leftContainer.classList.add("hidden");
+                uiPanel.classList.add("hidden");
+                uiToggleBtn.innerText = "SHOW UI";
+            }
+        });
+
+        const canvas = document.getElementById("renderCanvas");
+        
+        // Reverted to clean engine without post-processing MSAA
+        const engine = new BABYLON.Engine(canvas, true);
+
+        const createScene = async function () {
+            const scene = new BABYLON.Scene(engine);
+            scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+
+            // Using the stable built-in ToneMapping configuration
+            scene.imageProcessingConfiguration.toneMappingEnabled = false;
+            scene.imageProcessingConfiguration.exposure = 1.3;
+            scene.imageProcessingConfiguration.contrast = 1;
+
+            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 5, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            camera.wheelPrecision = 100; 
+            camera.pinchPrecision = 200; 
+            
+            // --- THE Z-FIGHTING FIX ---
+            // Increasing minZ significantly improves depth buffer precision, fixing the zoom-out glitches.
+            camera.minZ = 0.1; 
+            camera.maxZ = 200.0; 
+            
+            camera.lowerRadiusLimit = 1.8; 
+            camera.upperRadiusLimit = 20.0;
+
+            scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
+            scene.environmentIntensity = 1.0;
+
+            const extraLight = new BABYLON.HemisphericLight("extraLight", new BABYLON.Vector3(0, 1, 0), scene);
+            extraLight.intensity = 0.5; 
+            extraLight.groundColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+
+            const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
+            stressLight.position = new BABYLON.Vector3(20, 40, 20);
+            stressLight.diffuse = new BABYLON.Color3(1.0, 0.0, 0.0); 
+            stressLight.intensity = 1; 
+
+            try {
+                await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.glb", scene);
+                
+                document.getElementById('loading-screen').style.display = 'none';
+
+                const worldExtends = scene.getWorldExtends();
+                const center = worldExtends.min.add(worldExtends.max).scale(0.5);
+                camera.setTarget(center);
+
+                scene.executeWhenReady(() => {
+                    camera.useFramingBehavior = true;
+                    const framingBehavior = camera.getBehaviorByName("Framing");
+                    if (framingBehavior) {
+                        framingBehavior.framingTime = 0;
+                        framingBehavior.elevationReturnTime = -1;
+                        framingBehavior.zoomOnMeshesHierarchy(scene.meshes);
+                    }
+                });
+
+                scene.materials.forEach(mat => {
+                    if (mat instanceof BABYLON.PBRMaterial) {
+                        const matName = mat.name ? mat.name.toLowerCase() : "";
+                        
+                        // Clean Depth Pass for Glass using your exact material name
+                        if (matName.includes("mat_body_glass")) {
+                            mat.needDepthPrePass = true;
+                            mat.backFaceCulling = true; // Ensures the back wall doesn't fight the front wall
+                        }
+
+                        // Apply AO map, ignoring glass and vagus
+                        if (!matName.includes("mat_vagus_glow") && !matName.includes("mat_body_glass")) {
+                            if (mat.metallicTexture) {
+                                mat.ambientTexture = mat.metallicTexture;
+                                mat.useAmbientOcclusionFromMetallicTextureRed = true;
+                                mat.ambientTextureStrength = 1.0; 
+                                mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
+                                mat.markDirty();
+                            }
+                        }
+                    }
+                });
+
+                if (scene.animationGroups && scene.animationGroups.length > 0) {
+                    scene.animationGroups.forEach(anim => anim.play(true));
+                }
+
+                let totalTris = 0;
+                let totalVerts = 0;
+                scene.meshes.forEach(m => {
+                    totalVerts += m.getTotalVertices() || 0;
+                    const indices = m.getIndices();
+                    if (indices) totalTris += (indices.length / 3);
+                });
+                document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
+                document.getElementById("verts").innerText = totalVerts.toLocaleString();
+
+                const modelUrl = "./models/human_stress_v01.glb";
+                fetch(modelUrl, { method: 'HEAD' })
+                    .then(res => {
+                        const totalBytes = parseInt(res.headers.get('content-length') || 0, 10);
+                        if (totalBytes > 0) {
+                            document.getElementById("fileSize").innerText = (totalBytes / (1024 * 1024)).toFixed(2) + " MB";
+                        } else {
+                            document.getElementById("fileSize").innerText = "Ready";
+                        }
+                    })
+                    .catch(() => { document.getElementById("fileSize").innerText = "Unknown"; });
+
+                let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("mat_vagus_glow"));
+                let originalVagusColor = new BABYLON.Color3(0, 0, 0);
+                let originalVagusIntensity = 1.0;
+
+                if (vagusMat) {
+                    if (vagusMat.emissiveColor) originalVagusColor = vagusMat.emissiveColor.clone();
+                    if (vagusMat.emissiveIntensity !== undefined) originalVagusIntensity = vagusMat.emissiveIntensity;
+                }
+
+                const gallery = document.getElementById("tex-gallery");
+                const textureFiles = [
+                    { file: "body_baseColor_512.jpg", full: "body_baseColor_512.jpg", label: "Base Color" },
+                    { file: "body_normal_512.jpg", full: "body_normal_512.jpg", label: "Normal" },
+                    { file: "body_occlusionRoughnessMetallic_512.jpg", full: "body_occlusionRoughnessMetallic_512.jpg", label: "ORM Map" }
+                ];
+
+                textureFiles.forEach(tex => {
+                    let box = document.createElement("div");
+                    box.className = "tex-box";
+                    const previewPath = `./models/${tex.file}`;
+                    const fullPath = `./models/${tex.full}`;
+                    box.style.backgroundImage = `url('${previewPath}')`;
+                    
+                    box.onclick = (e) => {
+                        e.stopPropagation(); 
+                        document.getElementById('modal-img').src = fullPath + "?v=" + new Date().getTime();
+                        document.getElementById('image-modal').style.display = 'flex';
+                    };
+                    
+                    let label = document.createElement("div");
+                    label.className = "tex-label";
+                    label.innerText = tex.label;
+                    box.appendChild(label);
+                    gallery.appendChild(box);
+                });
+
+                const wireframeBtn = document.getElementById("wireframe-btn");
+                let isWireframe = false;
+                wireframeBtn.addEventListener("click", () => {
+                    isWireframe = !isWireframe;
+                    wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
+                    wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
+                    scene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
+                });
+
+                const tonemapSelect = document.getElementById("tonemapSelect");
+                const iblSlider = document.getElementById("iblSlider");
+                const iblVal = document.getElementById("iblVal");
+
+                tonemapSelect.addEventListener("change", (e) => {
+                    if (e.target.value === "aces") {
+                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
+                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+                    } else if (e.target.value === "standard") {
+                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
+                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
+                    } else {
+                        scene.imageProcessingConfiguration.toneMappingEnabled = false;
+                    }
+                });
+
+                iblSlider.addEventListener("input", () => {
+                    const val = parseFloat(iblSlider.value);
+                    scene.environmentIntensity = val;
+                    iblVal.innerText = val.toFixed(1);
+                });
+
+                const slider = document.getElementById("stressSlider");
+                const fpsElem = document.getElementById("fps");
+
+                scene.onBeforeRenderObservable.add(() => {
+                    let currentFps = engine.getFps();
+                    fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
+                    
+                    const stressLevel = parseFloat(slider.value);
+
+                    stressLight.intensity = stressLevel * 0.8; 
+
+                    if (scene.animationGroups) {
+                        const speed = 1.0 + (stressLevel * 3.0); 
+                        scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+                    }
+
+                    if (vagusMat) {
+                        const peakColor = new BABYLON.Color3(1.0, 0.0, 0.0); 
+                        vagusMat.emissiveColor = BABYLON.Color3.Ler; 
             touch-action: none; 
         }
         #renderCanvas { width: 100%; height: 100%; display: block; z-index: 1; position: absolute; outline: none; background: transparent; }
