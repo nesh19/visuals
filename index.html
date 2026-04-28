@@ -253,7 +253,16 @@
                     if (mat instanceof BABYLON.PBRMaterial) {
                         const matName = mat.name ? mat.name.toLowerCase() : "";
                         // Prevents forcing AO onto the emissive material so it stays clean
-                        if (!matName.includes("vagus") && !matName.includes("glass")) {
+                        if (matName.includes("glass") || matName.includes("body")) { 
+                            // Force the GPU to calculate the physical wall of the glass first
+                            mat.needDepthPrePass = true;
+                            mat.backFaceCulling = true; // Prevents the inside of the back wall from glitching over the front
+                            
+                            // Optional: If the glass is too foggy, this sharpens the transmission
+                            mat.realTimeFiltering = true; 
+                        }
+                      // --- FIX FOR EVERYTHING ELSE (Ambient Occlusion) ---
+                        if (!matName.includes("vagus") && !matName.includes("glass") && !matName.includes("body")) {
                             if (mat.metallicTexture) {
                                 mat.ambientTexture = mat.metallicTexture;
                                 mat.useAmbientOcclusionFromMetallicTextureRed = true;
