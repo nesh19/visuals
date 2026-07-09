@@ -38,6 +38,7 @@
         .tab-btn.active { background: #00ff00; color: #111; font-weight: bold; }
         .tab-btn:hover:not(.active) { color: #fff; background: rgba(255,255,255,0.1); }
 
+        /* FIXED: Moved to top: 70px to avoid overlap */
         #ui-toggle-btn {
             position: absolute; top: 70px; right: 20px; z-index: 1000;
             background: rgba(0,0,0,0.8); border: 1px solid #444; border-radius: 8px;
@@ -247,7 +248,7 @@
         const engine = new BABYLON.Engine(canvas, true);
 
         let currentScene = null;
-        let isWireframe = false; // Preserved globally across models
+        let isWireframe = false;
 
         // --- GLOBAL UI EVENT LISTENERS ---
         document.getElementById("wireframe-btn").addEventListener("click", () => {
@@ -397,6 +398,7 @@
                 // --- STRESS SCENE LOGIC ---
                 if (type === 'stress') {
                     
+                    // FIXED: Now grabs both the Vagus and the Mid-Brain
                     let vagusMat = scene.materials.find(m => m.name && (m.name.toLowerCase().includes("vagus")));
                     let brainMesh = scene.getMeshByName("mesh_mid_brain");
                     let brainMat = brainMesh ? brainMesh.material : null;
@@ -439,6 +441,7 @@
 
                         const peakColor = new BABYLON.Color3(1.0, 0.0, 0.0); 
 
+                        // FIXED: Applies emissive glow to both materials at once
                         [vagusMat, brainMat].forEach(mat => {
                             if (mat) {
                                 mat.emissiveColor = BABYLON.Color3.Lerp(new BABYLON.Color3(0,0,0), peakColor, stressLevel);
@@ -453,6 +456,7 @@
                 // --- CRANIOFACIAL SCENE LOGIC ---
                 else if (type === 'face') {
                     
+                    // FIXED: Restored Face Texture Array
                     const faceTextures = [
                         { file: "head_baseColor_512.jpg", full: "head_baseColor_512.jpg", label: "Base Color" },
                         { file: "head_normal_512.jpg", full: "head_normal_512.jpg", label: "Normal" },
