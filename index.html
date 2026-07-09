@@ -14,7 +14,7 @@
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
             display: flex; gap: 10px; background: rgba(10, 10, 15, 0.85);
             padding: 8px; border-radius: 30px; border: 1px solid rgba(0, 255, 204, 0.2);
-            backdrop-filter: blur(10px); z-index: 10;
+            backdrop-filter: blur(10px); z-index: 100;
         }
         .tab-btn {
             background: transparent; border: none; color: #888; padding: 10px 20px;
@@ -30,6 +30,7 @@
             background: rgba(10, 10, 15, 0.9); padding: 25px; border-radius: 16px;
             border: 1px solid rgba(0, 255, 204, 0.2); color: white; width: 340px;
             backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 100;
         }
         .panel-section { display: none; text-align: center; }
         .panel-section.active { display: block; }
@@ -40,31 +41,43 @@
         
         input[type=range] { width: 100%; margin-top: 8px; cursor: pointer; }
         #stressSlider { accent-color: #ff4d4d; }
-        .face-slider { accent-color: #00ffcc; direction: rtl; } /* Reverses slider direction so 1 is on the right, 0 on the left */
+        .face-slider { accent-color: #00ffcc; direction: rtl; } 
+        
+        /* Statistics Field */
+        .stats-box {
+            margin-top: 15px; font-family: monospace; color: #ff4d4d; font-size: 13px; 
+            text-align: left; background: rgba(0,0,0,0.5); padding: 10px; 
+            border-radius: 6px; border: 1px solid rgba(255, 77, 77, 0.3);
+        }
+        .stats-box span { float: right; color: #fff; }
     </style>
 </head>
 <body>
 
     <!-- Top Dashboard Navigation -->
     <div id="nav-header">
-        <button class="tab-btn active" onclick="switchSimulation('stress')">Cortisol Response</button>
-        <button class="tab-btn" onclick="switchSimulation('face')">Craniofacial Reshaping</button>
+        <button id="btn-stress" class="tab-btn active" onclick="switchSimulation('stress')">Cortisol Response</button>
+        <button id="btn-face" class="tab-btn" onclick="switchSimulation('face')">Craniofacial Reshaping</button>
     </div>
 
     <!-- Interface Control Panel -->
     <div id="ui-panel">
+        
         <!-- SIM 1: Cortisol Stress Controls -->
         <div id="stress-controls" class="panel-section active">
             <strong style="letter-spacing: 2px; color: #ff4d4d;">PHYSIOLOGICAL STRESS LEVEL</strong>
             <div class="slider-group">
                 <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
             </div>
+            <div class="stats-box">
+                HEART RATE: <span id="bpmVal">60 BPM</span><br>
+                CORTISOL: <span id="cortisolVal">BASELINE</span>
+            </div>
         </div>
 
         <!-- SIM 2: Face Reshaping Controls -->
         <div id="face-controls" class="panel-section">
             <strong style="letter-spacing: 2px; color: #00ffcc;">ANATOMICAL MORPH TARGETS</strong>
-            
             <div class="slider-group">
                 <label for="humpSlider">Nasal Dorsal Hump <span id="humpVal">1.00</span></label>
                 <input type="range" id="humpSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
@@ -94,7 +107,7 @@
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color4(0.02, 0.02, 0.03, 1);
 
-            const camera = new BABYLON.ArcRotateCamera("cam", -Math.PI/2, Math.PI/2.1, 2.5, new BABYLON.Vector3(0, 0.3, 0), scene);
+            const camera = new BABYLON.ArcRotateCamera("cam", Math.PI/2, Math.PI/2.1, 2.5, new BABYLON.Vector3(0, 0.3, 0), scene);
             camera.attachControl(canvas, true);
             camera.lowerRadiusLimit = 1.5;
             camera.upperRadiusLimit = 5;
@@ -126,13 +139,30 @@
 
                     scene.onBeforeRenderObservable.add(() => {
                         const slider = document.getElementById("stressSlider");
+                        if (!slider) return;
                         const stressLevel = parseFloat(slider.value);
 
+                        // Dynamic Statistics Update
+                        const bpm = Math.floor(60 + (stressLevel * 80)); 
+                        document.getElementById("bpmVal").innerText = bpm + " BPM";
+                        
+                        let cortisolState = "BASELINE";
+                        if (stressLevel > 0.3 && stressLevel <= 0.7) cortisolState = "ELEVATED";
+                        if (stressLevel > 0.7) cortisolState = "CRITICAL";
+                        document.getElementById("cortisolVal").innerText = cortisolState;
+
+                        // Dynamic Animation Speed
+                        animationGroups.forEach(anim => {
+                            anim.speedRatio = 1 + (stressLevel * 1.5);
+                        });
+
+                        // Vagus Nerve Morph Sync
                         if(heart && heart.morphTargetManager && vagus && vagus.morphTargetManager) {
                             vagus.morphTargetManager.getTarget(0).influence = heart.morphTargetManager.getTarget(0).influence;
                             vagus.morphTargetManager.getTarget(1).influence = heart.morphTargetManager.getTarget(1).influence;
                         }
 
+                        // Light & Emissive Modulation
                         const stressColor = BABYLON.Color3.Lerp(
                             new BABYLON.Color3(0.1, 0.4, 1.0), 
                             new BABYLON.Color3(1.0, 0.0, 0.0), 
@@ -157,10 +187,10 @@
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color4(0.02, 0.02, 0.03, 1);
 
-            const camera = new BABYLON.ArcRotateCamera("faceCam", 0, Math.PI / 2, 2.0, new BABYLON.Vector3(0, 0.2, 0), scene);
+            const camera = new BABYLON.ArcRotateCamera("faceCam", Math.PI/2, Math.PI / 2, 2.0, new BABYLON.Vector3(0, 0.1, 0), scene);
             camera.attachControl(canvas, true);
-            camera.lowerRadiusLimit = 1.0;
-            camera.upperRadiusLimit = 4.0;
+            camera.lowerRadiusLimit = 0.5;
+            camera.upperRadiusLimit = 5.0;
 
             const keyLight = new BABYLON.DirectionalLight("keyLight", new BABYLON.Vector3(-1, -0.5, 1), scene);
             keyLight.intensity = 2.0;
@@ -220,8 +250,9 @@
             if (activeSim === type) return;
             activeSim = type;
 
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
+            document.getElementById('btn-stress').classList.remove('active');
+            document.getElementById('btn-face').classList.remove('active');
+            document.getElementById(`btn-${type}`).classList.add('active');
 
             document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
             document.getElementById(`${type}-controls`).classList.add('active');
