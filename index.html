@@ -1,279 +1,109 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Anatomical Simulation Suite | Portfolio</title>
+    <title>Hiverlab Portfolio | Stress Simulation</title>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
     <style>
-        /* Cyberpunk / Medical Clinical Aesthetic */
-        body { margin: 0; background: #050508; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { margin: 0; background: #0a0a0c; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         canvas { width: 100%; height: 100%; outline: none; }
-        
-        /* Navigation Tabs */
-        #nav-header {
-            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-            display: flex; gap: 10px; background: rgba(10, 10, 15, 0.85);
-            padding: 8px; border-radius: 30px; border: 1px solid rgba(0, 255, 204, 0.2);
-            backdrop-filter: blur(10px); z-index: 100;
-        }
-        .tab-btn {
-            background: transparent; border: none; color: #888; padding: 10px 20px;
-            border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 13px;
-            letter-spacing: 1px; text-transform: uppercase; transition: all 0.3s;
-        }
-        .tab-btn.active { background: #00ffcc; color: #050508; box-shadow: 0 0 15px rgba(0, 255, 204, 0.4); }
-        .tab-btn:hover:not(.active) { color: #fff; background: rgba(255,255,255,0.05); }
-
-        /* UI Control Panel */
         #ui-panel {
             position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-            background: rgba(10, 10, 15, 0.9); padding: 25px; border-radius: 16px;
-            border: 1px solid rgba(0, 255, 204, 0.2); color: white; width: 340px;
-            backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            z-index: 100;
+            background: rgba(15, 15, 20, 0.85); padding: 25px; border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1); color: white; width: 320px;
+            backdrop-filter: blur(10px); text-align: center;
         }
-        .panel-section { display: none; text-align: center; }
-        .panel-section.active { display: block; }
-        
-        .slider-group { margin: 18px 0; text-align: left; }
-        label { font-size: 12px; letter-spacing: 1.5px; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 5px; }
-        label span { color: #00ffcc; font-family: monospace; float: right; }
-        
-        input[type=range] { width: 100%; margin-top: 8px; cursor: pointer; }
-        #stressSlider { accent-color: #ff4d4d; }
-        .face-slider { accent-color: #00ffcc; direction: rtl; } 
-        
-        /* Statistics Field */
-        .stats-box {
-            margin-top: 15px; font-family: monospace; color: #ff4d4d; font-size: 13px; 
-            text-align: left; background: rgba(0,0,0,0.5); padding: 10px; 
-            border-radius: 6px; border: 1px solid rgba(255, 77, 77, 0.3);
-        }
-        .stats-box span { float: right; color: #fff; }
+        input[type=range] { width: 100%; margin-top: 15px; cursor: pointer; accent-color: #ff4d4d; }
     </style>
 </head>
 <body>
-
-    <!-- Top Dashboard Navigation -->
-    <div id="nav-header">
-        <button id="btn-stress" class="tab-btn active" onclick="switchSimulation('stress')">Cortisol Response</button>
-        <button id="btn-face" class="tab-btn" onclick="switchSimulation('face')">Craniofacial Reshaping</button>
-    </div>
-
-    <!-- Interface Control Panel -->
     <div id="ui-panel">
-        
-        <!-- SIM 1: Cortisol Stress Controls -->
-        <div id="stress-controls" class="panel-section active">
-            <strong style="letter-spacing: 2px; color: #ff4d4d;">PHYSIOLOGICAL STRESS LEVEL</strong>
-            <div class="slider-group">
-                <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
-            </div>
-            <div class="stats-box">
-                HEART RATE: <span id="bpmVal">60 BPM</span><br>
-                CORTISOL: <span id="cortisolVal">BASELINE</span>
-            </div>
-        </div>
-
-        <!-- SIM 2: Face Reshaping Controls -->
-        <div id="face-controls" class="panel-section">
-            <strong style="letter-spacing: 2px; color: #00ffcc;">ANATOMICAL MORPH TARGETS</strong>
-            <div class="slider-group">
-                <label for="humpSlider">Nasal Dorsal Hump <span id="humpVal">1.00</span></label>
-                <input type="range" id="humpSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
-            </div>
-            <div class="slider-group">
-                <label for="chinSlider">Chin Retrognathia <span id="chinVal">1.00</span></label>
-                <input type="range" id="chinSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
-            </div>
-            <div class="slider-group">
-                <label for="fatSlider">Submental Fat <span id="fatVal">1.00</span></label>
-                <input type="range" id="fatSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
-            </div>
-        </div>
+        <strong style="letter-spacing: 2px;">CORTISOL RESPONSE</strong>
+        <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
     </div>
-
     <canvas id="renderCanvas"></canvas>
 
     <script>
         const canvas = document.getElementById("renderCanvas");
         const engine = new BABYLON.Engine(canvas, true);
-        
-        let currentScene = null;
-        let activeSim = 'stress';
 
-        // --- SCENE 1: CORTISOL SIMULATION ---
-        const createStressScene = function () {
+        const createScene = function () {
             const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0.02, 0.02, 0.03, 1);
+            scene.clearColor = new BABYLON.Color4(0.05, 0.05, 0.07, 1);
 
-            const camera = new BABYLON.ArcRotateCamera("cam", Math.PI/2, Math.PI/2.1, 2.5, new BABYLON.Vector3(0, 0.3, 0), scene);
+            // Camera Setup
+            const camera = new BABYLON.ArcRotateCamera("cam", -Math.PI/2, Math.PI/2.1, 2.5, new BABYLON.Vector3(0, 0.3, 0), scene);
             camera.attachControl(canvas, true);
             camera.lowerRadiusLimit = 1.5;
             camera.upperRadiusLimit = 5;
 
+            // FIX: THE AMYGDALA LIGHT
+            // Using Physical Falloff so 0.1 intensity doesn't blow out the scene
             const amygdalaLight = new BABYLON.PointLight("amygdalaLight", new BABYLON.Vector3(0, 0.65, 0.05), scene);
             amygdalaLight.intensity = 0.02; 
-            amygdalaLight.range = 0.4; 
+            amygdalaLight.range = 0.4; // Light physically cannot travel further than this
             amygdalaLight.falloffType = BABYLON.Light.FALLOFF_PHYSICAL; 
-            amygdalaLight.diffuse = new BABYLON.Color3(0.2, 0.5, 1.0);
+            amygdalaLight.diffuse = new BABYLON.Color3(0.2, 0.5, 1.0); // Start calm blue
 
-            scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
+            // Environment
+            const env = scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
 
+            // ASSET LOADER
             BABYLON.SceneLoader.ImportMesh("", "./models/", "human_stress_v01.glb", scene, 
-                function (meshes, particleSystems, skeletons, animationGroups) {
-                    const body = scene.getMeshByName("mesh_body");
-                    if(body) {
-                        const glassMat = new BABYLON.PBRMaterial("glassMat", scene);
-                        glassMat.alpha = 0.15;
-                        glassMat.transmission = 1.0;
-                        glassMat.roughness = 0.05;
-                        glassMat.indexOfRefraction = 1.45;
-                        body.material = glassMat;
+			    function (meshes, particleSystems, skeletons, animationGroups) {
+                console.log("Model loaded from models folder!"); 
+                
+                // 1. Setup the Glass Torso
+                const body = scene.getMeshByName("mesh_body");
+                const glassMat = new BABYLON.PBRMaterial("glassMat", scene);
+                glassMat.alpha = 0.15;
+                glassMat.transmission = 1.0;
+                glassMat.roughness = 0.05;
+                glassMat.indexOfRefraction = 1.45; // Real glass physics
+                body.material = glassMat;
+
+                // 2. Play all loops (Heart + Lungs)
+                animationGroups.forEach(group => group.play(true));
+
+                // 3. Setup Vagus Nerve Emissive
+                const vagus = scene.getMeshByName("mesh_vagus");
+                const vagusMat = vagus.material; 
+
+                // 4. UI INTERACTION LOGIC
+                const slider = document.getElementById("stressSlider");
+                const heart = scene.getMeshByName("mesh_heart");
+
+                scene.onBeforeRenderObservable.add(() => {
+                    const stressLevel = parseFloat(slider.value);
+
+                    // SYNC VAGUS TO HEART (The "Code Glue")
+                    if(heart.morphTargetManager && vagus.morphTargetManager) {
+                        const heartPulse = heart.morphTargetManager.getTarget(0).influence;
+                        // Slaving the nerve to the heart's current frame
+                        vagus.morphTargetManager.getTarget(0).influence = heartPulse;
+                        vagus.morphTargetManager.getTarget(1).influence = heart.morphTargetManager.getTarget(1).influence;
                     }
 
-                    animationGroups.forEach(group => group.play(true));
+                    // MODULATE LIGHT & NERVE GLOW
+                    const stressColor = BABYLON.Color3.Lerp(
+                        new BABYLON.Color3(0.1, 0.4, 1.0), // Blue
+                        new BABYLON.Color3(1.0, 0.0, 0.0), // Red
+                        stressLevel
+                    );
 
-                    const vagus = scene.getMeshByName("mesh_vagus");
-                    const heart = scene.getMeshByName("mesh_heart");
+                    amygdalaLight.diffuse = stressColor;
+                    amygdalaLight.intensity = 0.02 + (stressLevel * 0.8);
+                    
+                    vagusMat.emissiveColor = stressColor;
+                    vagusMat.emissiveIntensity = stressLevel * 4;
+                });
+            });
 
-                    scene.onBeforeRenderObservable.add(() => {
-                        const slider = document.getElementById("stressSlider");
-                        if (!slider) return;
-                        const stressLevel = parseFloat(slider.value);
-
-                        // Dynamic Statistics Update
-                        const bpm = Math.floor(60 + (stressLevel * 80)); 
-                        document.getElementById("bpmVal").innerText = bpm + " BPM";
-                        
-                        let cortisolState = "BASELINE";
-                        if (stressLevel > 0.3 && stressLevel <= 0.7) cortisolState = "ELEVATED";
-                        if (stressLevel > 0.7) cortisolState = "CRITICAL";
-                        document.getElementById("cortisolVal").innerText = cortisolState;
-
-                        // Dynamic Animation Speed
-                        animationGroups.forEach(anim => {
-                            anim.speedRatio = 1 + (stressLevel * 1.5);
-                        });
-
-                        // Vagus Nerve Morph Sync
-                        if(heart && heart.morphTargetManager && vagus && vagus.morphTargetManager) {
-                            vagus.morphTargetManager.getTarget(0).influence = heart.morphTargetManager.getTarget(0).influence;
-                            vagus.morphTargetManager.getTarget(1).influence = heart.morphTargetManager.getTarget(1).influence;
-                        }
-
-                        // Light & Emissive Modulation
-                        const stressColor = BABYLON.Color3.Lerp(
-                            new BABYLON.Color3(0.1, 0.4, 1.0), 
-                            new BABYLON.Color3(1.0, 0.0, 0.0), 
-                            stressLevel
-                        );
-
-                        amygdalaLight.diffuse = stressColor;
-                        amygdalaLight.intensity = 0.02 + (stressLevel * 0.8);
-                        
-                        if(vagus && vagus.material) {
-                            vagus.material.emissiveColor = stressColor;
-                            vagus.material.emissiveIntensity = stressLevel * 4;
-                        }
-                    });
-                }
-            );
             return scene;
         };
 
-        // --- SCENE 2: CRANIOFACIAL RESHAPING ---
-        const createFaceScene = function () {
-            const scene = new BABYLON.Scene(engine);
-            scene.clearColor = new BABYLON.Color4(0.02, 0.02, 0.03, 1);
-
-            const camera = new BABYLON.ArcRotateCamera("faceCam", Math.PI/2, Math.PI / 2, 2.0, new BABYLON.Vector3(0, 0.1, 0), scene);
-            camera.attachControl(canvas, true);
-            camera.lowerRadiusLimit = 0.5;
-            camera.upperRadiusLimit = 5.0;
-
-            const keyLight = new BABYLON.DirectionalLight("keyLight", new BABYLON.Vector3(-1, -0.5, 1), scene);
-            keyLight.intensity = 2.0;
-            keyLight.diffuse = new BABYLON.Color3(1, 1, 1);
-
-            const rimLight = new BABYLON.DirectionalLight("rimLight", new BABYLON.Vector3(1, 0.5, -1), scene);
-            rimLight.intensity = 3.5;
-            rimLight.diffuse = new BABYLON.Color3(0, 1, 0.8);
-
-            scene.createDefaultEnvironment({ createGround: false, createSkybox: false });
-
-            BABYLON.SceneLoader.ImportMesh("", "./models/", "anatomical-morph-viewer.glb", scene, 
-                function (meshes) {
-                    let headMesh = null;
-
-                    meshes.forEach(mesh => {
-                        if (mesh.morphTargetManager) {
-                            headMesh = mesh;
-                        }
-                    });
-
-                    if (headMesh && headMesh.morphTargetManager) {
-                        for (let i = 0; i < headMesh.morphTargetManager.numTargets; i++) {
-                            headMesh.morphTargetManager.getTarget(i).influence = 1.0;
-                        }
-                    }
-
-                    const config = [
-                        { sliderId: "humpSlider", valId: "humpVal", index: 0 },
-                        { sliderId: "chinSlider", valId: "chinVal", index: 1 },
-                        { sliderId: "fatSlider",  valId: "fatVal",  index: 2 }
-                    ];
-
-                    config.forEach(item => {
-                        const slider = document.getElementById(item.sliderId);
-                        const label = document.getElementById(item.valId);
-
-                        slider.addEventListener("input", function() {
-                            const val = parseFloat(slider.value);
-                            
-                            if (val === 1) label.innerText = "1.00 (Before)";
-                            else if (val === 0) label.innerText = "0.00 (After)";
-                            else label.innerText = val.toFixed(2);
-
-                            if (headMesh && headMesh.morphTargetManager && headMesh.morphTargetManager.getTarget(item.index)) {
-                                headMesh.morphTargetManager.getTarget(item.index).influence = val;
-                            }
-                        });
-                    });
-                }
-            );
-            return scene;
-        };
-
-        // --- DASHBOARD ROUTER LOGIC ---
-        function switchSimulation(type) {
-            if (activeSim === type) return;
-            activeSim = type;
-
-            document.getElementById('btn-stress').classList.remove('active');
-            document.getElementById('btn-face').classList.remove('active');
-            document.getElementById(`btn-${type}`).classList.add('active');
-
-            document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
-            document.getElementById(`${type}-controls`).classList.add('active');
-
-            if (currentScene) {
-                currentScene.dispose();
-            }
-
-            if (type === 'stress') {
-                currentScene = createStressScene();
-            } else if (type === 'face') {
-                currentScene = createFaceScene();
-            }
-        }
-
-        currentScene = createStressScene();
-        
-        engine.runRenderLoop(() => {
-            if (currentScene) currentScene.render();
-        });
-        
+        const scene = createScene();
+        engine.runRenderLoop(() => scene.render());
         window.addEventListener("resize", () => engine.resize());
     </script>
 </body>
