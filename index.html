@@ -23,6 +23,21 @@
             font-size: 16px; letter-spacing: 2px;
         }
 
+        /* Top Navigation Dashboard */
+        #nav-header {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 10px; background: rgba(10, 10, 15, 0.85);
+            padding: 8px; border-radius: 8px; border: 1px solid #444;
+            backdrop-filter: blur(5px); z-index: 10;
+        }
+        .tab-btn {
+            background: transparent; border: none; color: #888; padding: 8px 16px;
+            border-radius: 4px; cursor: pointer; font-family: 'Consolas', monospace; font-size: 12px;
+            letter-spacing: 1px; transition: all 0.3s;
+        }
+        .tab-btn.active { background: #00ff00; color: #111; font-weight: bold; }
+        .tab-btn:hover:not(.active) { color: #fff; background: rgba(255,255,255,0.1); }
+
         #ui-toggle-btn {
             position: absolute; top: 20px; right: 20px; z-index: 10;
             background: rgba(0,0,0,0.8); border: 1px solid #444; border-radius: 8px;
@@ -43,6 +58,9 @@
             border: 1px solid #444; width: 90%; max-width: 320px; text-align: center; z-index: 5; backdrop-filter: blur(5px);
             transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), opacity 0.4s ease;
         }
+        
+        .panel-section { display: none; }
+        .panel-section.active { display: block; }
 
         #left-container.hidden { transform: translateX(-150%) !important; opacity: 0; pointer-events: none; }
         #ui-panel.hidden { transform: translate(-50%, 150%) !important; opacity: 0; pointer-events: none; }
@@ -70,6 +88,8 @@
         .slider-label { font-size: 10px; color: #aaa; letter-spacing: 1px; display: flex; justify-content: space-between; margin-bottom: 5px; }
         .slider-val { color: #00ff00; }
         input[type=range] { width: 100%; cursor: pointer; accent-color: #ff4d4d; }
+        .face-slider { accent-color: #00ffcc !important; direction: rtl; } 
+        
         select { width: 100%; background: #222; color: white; border: 1px solid #555; padding: 6px; font-family: 'Consolas', monospace; border-radius: 4px; cursor: pointer; font-size: 11px;}
         
         #iblSlider { accent-color: #4da6ff; }
@@ -82,7 +102,6 @@
         }
         #wireframe-btn:hover { background: #444; color: #fff; border-color: #888; }
 
-        /* MODAL FIX: High z-index to force fullscreen popup */
         #image-modal {
             display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.95); z-index: 99999;
@@ -98,8 +117,11 @@
         }
 
         @media (max-width: 768px) {
+            #nav-header { width: 85%; justify-content: center; }
+            .tab-btn { padding: 8px 10px; font-size: 10px; }
+
             #left-container { 
-                top: 10px; left: 10px; 
+                top: 70px; left: 10px; 
                 transform: scale(0.75); 
                 transform-origin: top left;
                 width: calc(100% / 0.75 - 26px);
@@ -130,6 +152,11 @@
     <div id="crash-screen">
         <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
         <p id="crash-log">Check your models folder. Are filenames case-sensitive?</p>
+    </div>
+
+    <div id="nav-header">
+        <button id="btn-stress" class="tab-btn active" onclick="switchSimulation('stress')">CORTISOL RESPONSE</button>
+        <button id="btn-face" class="tab-btn" onclick="switchSimulation('face')">CRANIOFACIAL RESHAPING</button>
     </div>
 
     <button id="ui-toggle-btn">HIDE UI</button>
@@ -167,10 +194,31 @@
     </div>
 
     <div id="ui-panel">
-        <div class="slider-group" style="margin-top: 0;">
-            <div class="slider-label" style="justify-content: center;"><span>CORTISOL / STRESS</span></div>
-            <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+        
+        <!-- Stress UI -->
+        <div id="stress-controls" class="panel-section active">
+            <div class="slider-group" style="margin-top: 0;">
+                <div class="slider-label" style="justify-content: center; color: #ff4d4d; letter-spacing: 2px;"><span>CORTISOL / STRESS</span></div>
+                <input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0">
+            </div>
         </div>
+
+        <!-- Face Morph UI -->
+        <div id="face-controls" class="panel-section">
+            <div class="slider-group" style="margin-top: 0;">
+                <div class="slider-label"><span>NASAL DORSAL HUMP</span> <span id="humpVal" class="slider-val">1.00</span></div>
+                <input type="range" id="humpSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label"><span>CHIN RETROGNATHIA</span> <span id="chinVal" class="slider-val">1.00</span></div>
+                <input type="range" id="chinSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
+            </div>
+            <div class="slider-group">
+                <div class="slider-label"><span>SUBMENTAL FAT</span> <span id="fatVal" class="slider-val">1.00</span></div>
+                <input type="range" id="fatSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
+            </div>
+        </div>
+
         <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
     </div>
 
@@ -198,11 +246,57 @@
         const canvas = document.getElementById("renderCanvas");
         const engine = new BABYLON.Engine(canvas, true);
 
-        const createScene = async function () {
+        let currentScene = null;
+        let isWireframe = false; // Preserved globally across models
+
+        // --- GLOBAL UI EVENT LISTENERS ---
+        document.getElementById("wireframe-btn").addEventListener("click", () => {
+            isWireframe = !isWireframe;
+            const btn = document.getElementById("wireframe-btn");
+            btn.style.color = isWireframe ? "#00ff00" : "#aaa";
+            btn.style.borderColor = isWireframe ? "#00ff00" : "#555";
+            if(currentScene) {
+                currentScene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
+            }
+        });
+
+        document.getElementById("tonemapSelect").addEventListener("change", (e) => {
+            if(!currentScene) return;
+            if (e.target.value === "aces") {
+                currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
+                currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+            } else if (e.target.value === "standard") {
+                currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
+                currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
+            } else {
+                currentScene.imageProcessingConfiguration.toneMappingEnabled = false;
+            }
+        });
+
+        document.getElementById("iblSlider").addEventListener("input", (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById("iblVal").innerText = val.toFixed(1);
+            if(currentScene) currentScene.environmentIntensity = val;
+        });
+
+        // --- CORE LOAD FUNCTION ---
+        const loadSimulation = async function (type) {
+            
+            document.getElementById('loading-screen').style.display = 'flex';
+            document.getElementById('crash-screen').style.display = 'none';
+
+            if (currentScene) {
+                currentScene.dispose();
+            }
+
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-            scene.imageProcessingConfiguration.toneMappingEnabled = false;
+            // Apply selected Tonemap
+            const tmVal = document.getElementById("tonemapSelect").value;
+            scene.imageProcessingConfiguration.toneMappingEnabled = tmVal !== "none";
+            if(tmVal === "aces") scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+            if(tmVal === "standard") scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
             scene.imageProcessingConfiguration.exposure = 1.3;
             scene.imageProcessingConfiguration.contrast = 1;
 
@@ -215,7 +309,7 @@
             camera.upperRadiusLimit = 20.0;
 
             scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-            scene.environmentIntensity = 1.0;
+            scene.environmentIntensity = parseFloat(document.getElementById("iblSlider").value);
 
             const extraLight = new BABYLON.HemisphericLight("extraLight", new BABYLON.Vector3(0, 1, 0), scene);
             extraLight.intensity = 0.5; 
@@ -224,14 +318,15 @@
             const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
             stressLight.position = new BABYLON.Vector3(20, 40, 20);
             stressLight.diffuse = new BABYLON.Color3(1.0, 0.0, 0.0); 
-            stressLight.intensity = 1; 
+            stressLight.intensity = type === 'stress' ? 0 : 0.8; // Base value depending on scene
 
-            // --- HDR GLOW POST-PROCESSING (Bloom equivalent) ---
             const glowLayer = new BABYLON.GlowLayer("glow", scene);
-            glowLayer.intensity = 0; // Starts off, controlled by the slider
+            glowLayer.intensity = 0; 
+
+            const modelFilename = type === 'stress' ? "human_stress_v01.glb" : "anatomical-morph-viewer.glb";
 
             try {
-                await BABYLON.SceneLoader.AppendAsync("./models/", "human_stress_v01.glb", scene);
+                await BABYLON.SceneLoader.AppendAsync("./models/", modelFilename, scene);
                 
                 document.getElementById('loading-screen').style.display = 'none';
 
@@ -249,10 +344,11 @@
                     }
                 });
 
+                // Apply wireframe globally if active
                 scene.materials.forEach(mat => {
+                    if (mat) mat.wireframe = isWireframe;
                     if (mat instanceof BABYLON.PBRMaterial) {
                         const matName = mat.name ? mat.name.toLowerCase() : "";
-                        // Prevents forcing AO onto the emissive material so it stays clean
                         if (!matName.includes("vagus") && !matName.includes("glass")) {
                             if (mat.metallicTexture) {
                                 mat.ambientTexture = mat.metallicTexture;
@@ -269,6 +365,7 @@
                     scene.animationGroups.forEach(anim => anim.play(true));
                 }
 
+                // DYNAMIC STATISTICS CALCULATION
                 let totalTris = 0;
                 let totalVerts = 0;
                 scene.meshes.forEach(m => {
@@ -279,8 +376,8 @@
                 document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
                 document.getElementById("verts").innerText = totalVerts.toLocaleString();
 
-                const modelUrl = "./models/human_stress_v01.glb";
-                fetch(modelUrl, { method: 'HEAD' })
+                document.getElementById("fileSize").innerText = "Calculating...";
+                fetch(`./models/${modelFilename}`, { method: 'HEAD' })
                     .then(res => {
                         const totalBytes = parseInt(res.headers.get('content-length') || 0, 10);
                         if (totalBytes > 0) {
@@ -291,116 +388,143 @@
                     })
                     .catch(() => { document.getElementById("fileSize").innerText = "Unknown"; });
 
-                // --- EXPLICIT MAT_VAGUS_GLOW TARGETING ---
-                let vagusMat = scene.materials.find(m => m.name && (m.name.toLowerCase().includes("mat_vagus_glow") || m.name.toLowerCase().includes("vagus")));
-                let originalVagusColor = new BABYLON.Color3(0, 0, 0);
-                let originalVagusIntensity = 1.0;
-
-                if (vagusMat) {
-                    if (vagusMat.emissiveColor) originalVagusColor = vagusMat.emissiveColor.clone();
-                    if (vagusMat.emissiveIntensity !== undefined) originalVagusIntensity = vagusMat.emissiveIntensity;
-                }
-
                 const gallery = document.getElementById("tex-gallery");
-                const textureFiles = [
-                    { file: "body_baseColor_512.jpg", full: "body_baseColor_512.jpg", label: "Base Color" },
-                    { file: "body_normal_512.jpg", full: "body_normal_512.jpg", label: "Normal" },
-                    { file: "body_occlusionRoughnessMetallic_512.jpg", full: "body_occlusionRoughnessMetallic_512.jpg", label: "ORM Map" }
-                ];
+                gallery.innerHTML = ''; // Clear gallery
 
-                textureFiles.forEach(tex => {
-                    let box = document.createElement("div");
-                    box.className = "tex-box";
-                    const previewPath = `./models/${tex.file}`;
-                    const fullPath = `./models/${tex.full}`;
-                    box.style.backgroundImage = `url('${previewPath}')`;
-                    
-                    // --- MODAL CLICK FIX ---
-                    box.onclick = (e) => {
-                        e.stopPropagation(); // Forces the click to register and not be swallowed by background panels
-                        document.getElementById('modal-img').src = fullPath;
-                        document.getElementById('image-modal').style.display = 'flex';
-                    };
-                    
-                    let label = document.createElement("div");
-                    label.className = "tex-label";
-                    label.innerText = tex.label;
-                    box.appendChild(label);
-                    gallery.appendChild(box);
-                });
-
-                const wireframeBtn = document.getElementById("wireframe-btn");
-                let isWireframe = false;
-                wireframeBtn.addEventListener("click", () => {
-                    isWireframe = !isWireframe;
-                    wireframeBtn.style.color = isWireframe ? "#00ff00" : "#aaa";
-                    wireframeBtn.style.borderColor = isWireframe ? "#00ff00" : "#555";
-                    scene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
-                });
-
-                const tonemapSelect = document.getElementById("tonemapSelect");
-                const iblSlider = document.getElementById("iblSlider");
-                const iblVal = document.getElementById("iblVal");
-
-                tonemapSelect.addEventListener("change", (e) => {
-                    if (e.target.value === "aces") {
-                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
-                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-                    } else if (e.target.value === "standard") {
-                        scene.imageProcessingConfiguration.toneMappingEnabled = true;
-                        scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
-                    } else {
-                        scene.imageProcessingConfiguration.toneMappingEnabled = false;
-                    }
-                });
-
-                iblSlider.addEventListener("input", () => {
-                    const val = parseFloat(iblSlider.value);
-                    scene.environmentIntensity = val;
-                    iblVal.innerText = val.toFixed(1);
-                });
-
-                const slider = document.getElementById("stressSlider");
                 const fpsElem = document.getElementById("fps");
 
-                scene.onBeforeRenderObservable.add(() => {
-                    let currentFps = engine.getFps();
-                    fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
+                // --- STRESS SCENE LOGIC ---
+                if (type === 'stress') {
                     
-                    const stressLevel = parseFloat(slider.value);
-
-                    stressLight.intensity = stressLevel * 0.8; 
-
-                    if (scene.animationGroups) {
-                        const speed = 1.0 + (stressLevel * 3.0); 
-                        scene.animationGroups.forEach(anim => anim.speedRatio = speed);
-                    }
+                    let vagusMat = scene.materials.find(m => m.name && (m.name.toLowerCase().includes("mat_vagus_glow") || m.name.toLowerCase().includes("vagus")));
+                    let originalVagusColor = new BABYLON.Color3(0, 0, 0);
+                    let originalVagusIntensity = 1.0;
 
                     if (vagusMat) {
-                        const peakColor = new BABYLON.Color3(1.0, 0.0, 0.0); 
-                        vagusMat.emissiveColor = BABYLON.Color3.Lerp(originalVagusColor, peakColor, stressLevel);
-                        
-                        // Cranked multiplier so the base material gets blazing hot
-                        vagusMat.emissiveIntensity = originalVagusIntensity + (stressLevel * 50.0); 
-                        
-                        // Increase Bloom/Glow spread based on slider
-                        glowLayer.intensity = stressLevel * 1.5;
+                        if (vagusMat.emissiveColor) originalVagusColor = vagusMat.emissiveColor.clone();
+                        if (vagusMat.emissiveIntensity !== undefined) originalVagusIntensity = vagusMat.emissiveIntensity;
                     }
-                });
+
+                    // Populate Texture Gallery
+                    gallery.style.display = "flex";
+                    const textureFiles = [
+                        { file: "body_baseColor_512.jpg", full: "body_baseColor_512.jpg", label: "Base Color" },
+                        { file: "body_normal_512.jpg", full: "body_normal_512.jpg", label: "Normal" },
+                        { file: "body_occlusionRoughnessMetallic_512.jpg", full: "body_occlusionRoughnessMetallic_512.jpg", label: "ORM Map" }
+                    ];
+
+                    textureFiles.forEach(tex => {
+                        let box = document.createElement("div");
+                        box.className = "tex-box";
+                        const previewPath = `./models/${tex.file}`;
+                        box.style.backgroundImage = `url('${previewPath}')`;
+                        box.onclick = (e) => {
+                            e.stopPropagation(); 
+                            document.getElementById('modal-img').src = `./models/${tex.full}`;
+                            document.getElementById('image-modal').style.display = 'flex';
+                        };
+                        let label = document.createElement("div");
+                        label.className = "tex-label";
+                        label.innerText = tex.label;
+                        box.appendChild(label);
+                        gallery.appendChild(box);
+                    });
+
+                    const slider = document.getElementById("stressSlider");
+                    
+                    scene.onBeforeRenderObservable.add(() => {
+                        let currentFps = engine.getFps();
+                        fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
+                        
+                        const stressLevel = parseFloat(slider.value);
+                        stressLight.intensity = stressLevel * 0.8; 
+
+                        if (scene.animationGroups) {
+                            const speed = 1.0 + (stressLevel * 3.0); 
+                            scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+                        }
+
+                        if (vagusMat) {
+                            const peakColor = new BABYLON.Color3(1.0, 0.0, 0.0); 
+                            vagusMat.emissiveColor = BABYLON.Color3.Lerp(originalVagusColor, peakColor, stressLevel);
+                            vagusMat.emissiveIntensity = originalVagusIntensity + (stressLevel * 50.0); 
+                            glowLayer.intensity = stressLevel * 1.5;
+                        }
+                    });
+                } 
+                
+                // --- CRANIOFACIAL SCENE LOGIC ---
+                else if (type === 'face') {
+                    
+                    gallery.style.display = "none"; // Hide gallery for face model
+
+                    let headMesh = null;
+                    scene.meshes.forEach(mesh => {
+                        if (mesh.morphTargetManager) headMesh = mesh;
+                    });
+
+                    if (headMesh && headMesh.morphTargetManager) {
+                        for (let i = 0; i < headMesh.morphTargetManager.numTargets; i++) {
+                            headMesh.morphTargetManager.getTarget(i).influence = 1.0;
+                        }
+                    }
+
+                    const morphSliders = [
+                        { sliderId: "humpSlider", valId: "humpVal", index: 0 },
+                        { sliderId: "chinSlider", valId: "chinVal", index: 1 },
+                        { sliderId: "fatSlider",  valId: "fatVal",  index: 2 }
+                    ];
+
+                    scene.onBeforeRenderObservable.add(() => {
+                        let currentFps = engine.getFps();
+                        fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
+                        
+                        morphSliders.forEach(item => {
+                            const slider = document.getElementById(item.sliderId);
+                            const val = parseFloat(slider.value);
+                            
+                            // Dynamically update UI Values
+                            const label = document.getElementById(item.valId);
+                            if (val === 1) label.innerText = "1.00 (Before)";
+                            else if (val === 0) label.innerText = "0.00 (After)";
+                            else label.innerText = val.toFixed(2);
+
+                            // Apply morph data
+                            if (headMesh && headMesh.morphTargetManager && headMesh.morphTargetManager.getTarget(item.index)) {
+                                headMesh.morphTargetManager.getTarget(item.index).influence = val;
+                            }
+                        });
+                    });
+                }
+
+                currentScene = scene;
 
             } catch (error) {
                 document.getElementById('loading-screen').style.display = 'none';
                 document.getElementById('crash-screen').style.display = 'block';
                 console.error("LOAD ERROR:", error);
             }
-
-            return scene;
         };
 
-        createScene().then(scene => {
-            engine.runRenderLoop(() => {
-                scene.render();
-            });
+        // --- DASHBOARD ROUTER ---
+        function switchSimulation(type) {
+            document.getElementById('btn-stress').classList.remove('active');
+            document.getElementById('btn-face').classList.remove('active');
+            document.getElementById(`btn-${type}`).classList.add('active');
+
+            document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+            document.getElementById(`${type}-controls`).classList.add('active');
+
+            loadSimulation(type);
+        }
+
+        // Initialize First Scene
+        loadSimulation('stress');
+
+        engine.runRenderLoop(() => {
+            if (currentScene) {
+                currentScene.render();
+            }
         });
 
         window.addEventListener("resize", function () {
