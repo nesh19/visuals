@@ -4,91 +4,635 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Technical Artist Portfolio | nesh19</title>
+    
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    
     <style>
-        body { margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white; height: 100vh; width: 100vw; background: radial-gradient(circle, #3a3a3a 0%, #0a0a0a 100%); touch-action: none; }
+        body { 
+            margin: 0; padding: 0; overflow: hidden; font-family: 'Consolas', monospace; color: white; height: 100vh; width: 100vw;
+            background: radial-gradient(circle, #2a2a2a 0%, #050505 100%); 
+            touch-action: none; 
+        }
         #renderCanvas { width: 100%; height: 100%; display: block; z-index: 1; position: absolute; outline: none; background: transparent; }
-        #loading-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #111; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; color: #00ff00; font-size: 16px; letter-spacing: 2px; }
-        #nav-header { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(10, 10, 15, 0.85); padding: 8px; border-radius: 8px; border: 1px solid #444; backdrop-filter: blur(5px); z-index: 10; }
-        .tab-btn { background: transparent; border: none; color: #888; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: 'Consolas', monospace; font-size: 12px; letter-spacing: 1px; transition: all 0.3s; }
-        .tab-btn.active { background: #00ff00; color: #111; font-weight: bold; }
-        #ui-toggle-btn { position: absolute; top: 70px; right: 20px; z-index: 1000; background: rgba(0,0,0,0.8); border: 1px solid #444; border-radius: 8px; color: #aaa; padding: 10px 15px; font-family: 'Consolas', monospace; font-size: 11px; cursor: pointer; letter-spacing: 1px; }
-        #left-container { position: absolute; top: 20px; left: 20px; z-index: 5; display: flex; flex-direction: column; gap: 15px; pointer-events: none; width: 90%; max-width: 250px; }
-        #ui-panel { position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); background: rgba(15, 15, 15, 0.85); padding: 20px; border-radius: 10px; border: 1px solid #444; width: 90%; max-width: 320px; text-align: center; z-index: 5; backdrop-filter: blur(5px); }
-        .panel-section { display: none; } .panel-section.active { display: block; }
-        .panel-box { background: rgba(0,0,0,0.8); padding: 15px; border-radius: 8px; pointer-events: auto; }
-        .stat-val { color: #00ff00; font-weight: bold; }
-        #tex-gallery { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; background: rgba(0,0,0,0.6); padding: 10px; border-radius: 8px; pointer-events: auto;}
-        .tex-box { width: 60px; height: 60px; border: 1px solid #444; background-color: #1a1a1a; border-radius: 4px; position: relative; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; cursor: pointer; }
-        .tex-label { position: absolute; bottom: 0; left: 0; width: 100%; text-align: center; font-size: 8px; color: #ddd; background: rgba(0,0,0,0.8); padding: 3px 0; }
-        input[type=range] { width: 100%; cursor: pointer; accent-color: #ff4d4d; }
-        .face-slider { accent-color: #00ffcc !important; direction: rtl; } 
-        #wireframe-btn { width: 100%; margin-top: 15px; padding: 8px; cursor: pointer; background: #222; color: #aaa; border: 1px solid #555; border-radius: 4px; font-family: 'Consolas', monospace; font-size: 11px; }
+        
+        #loading-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #0d0d0d; z-index: 9999; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; color: #ffffff;
+            font-size: 14px; letter-spacing: 2px;
+        }
+
+        /* Top Navigation Dashboard */
+        #nav-header {
+            position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+            display: flex; gap: 6px; background: rgba(15, 15, 20, 0.75);
+            padding: 6px; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); z-index: 10;
+        }
+        .tab-btn {
+            background: transparent; border: none; color: #888; padding: 8px 18px;
+            border-radius: 8px; cursor: pointer; font-family: 'Consolas', monospace; font-size: 11px;
+            letter-spacing: 1px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tab-btn.active { background: #ffffff; color: #000000; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .tab-btn:hover:not(.active) { color: #fff; background: rgba(255,255,255,0.05); }
+
+        /* Floating Toolbar (Prikazuje se SAMO na mobilnom) */
+        #floating-toolbar {
+            display: none; position: absolute; top: 70px; left: 15px; right: 15px; z-index: 10;
+            flex-direction: row; justify-content: center; gap: 6px;
+        }
+        .tool-btn {
+            background: rgba(15, 15, 20, 0.85); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #aaa; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+            font-family: 'Consolas', monospace; font-size: 10px; letter-spacing: 1px;
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            flex: 1; text-align: center; transition: all 0.2s ease;
+        }
+        .tool-btn:hover, .tool-btn.active { color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(30, 30, 40, 0.9); }
+
+        /* DESKTOP: Levi Sidebar */
+        #left-container {
+            position: absolute; top: 75px; left: 20px; z-index: 9;
+            display: flex; flex-direction: column; gap: 12px; width: 280px; max-height: calc(100vh - 100px);
+            overflow-y: auto; padding-right: 2px; pointer-events: auto;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.2) transparent;
+        }
+        #left-container.hidden, #floating-toolbar.hidden { 
+            transform: translateX(-150%) scale(0.9); opacity: 0; pointer-events: none; 
+        }
+
+        .panel-box { 
+            background: rgba(15, 15, 20, 0.85); padding: 14px; border-radius: 14px; 
+            border: 1px solid rgba(255,255,255,0.12); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); display: block;
+        }
+        
+        #stats-panel { font-size: 11px; line-height: 1.5; text-align: left; }
+        .stat-val { color: #ffffff; font-weight: bold; float: right; }
+
+        #tex-gallery { display: flex; gap: 6px; justify-content: space-between; }
+        .tex-box { 
+            flex: 1; height: 64px; border: 1px solid rgba(255,255,255,0.1); background-color: #15151a; 
+            border-radius: 6px; position: relative; display: flex; align-items: center; justify-content: center;
+            background-size: cover; background-position: center; cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tex-box:hover { border-color: #fff; transform: translateY(-2px); }
+        .tex-label {
+            position: absolute; bottom: 0; left: 0; width: 100%; text-align: center;
+            font-size: 7px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            background: rgba(0,0,0,0.85); padding: 3px 0; border-bottom-left-radius: 5px; border-bottom-right-radius: 5px;
+        }
+
+        .panel-section { display: none; }
+        .panel-section.active { display: block; }
+
+        .slider-group { margin-top: 12px; text-align: left; }
+        .slider-label { font-size: 10px; color: #999; letter-spacing: 1px; display: flex; justify-content: space-between; margin-bottom: 5px; text-transform: uppercase; }
+        .slider-val { color: #ffffff; font-weight: bold; }
+        
+        input[type=range] { width: 100%; cursor: pointer; background: #333; height: 4px; border-radius: 2px; appearance: none; outline: none; }
+        input[type=range]::-webkit-slider-thumb { appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #fff; cursor: pointer; transition: transform 0.1s; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+        .stress-slider { accent-color: #ff4d4d !important; } 
+        .face-slider { accent-color: #00ffcc !important; }   
+        #iblSlider { accent-color: #4da6ff !important; }      
+        
+        select { width: 100%; background: #15151a; color: white; border: 1px solid rgba(255,255,255,0.1); padding: 6px; font-family: 'Consolas', monospace; border-radius: 6px; cursor: pointer; font-size: 11px; outline: none; }
+        select:hover { border-color: rgba(255,255,255,0.3); }
+
+        #wireframe-btn {
+            width: 100%; margin-top: 12px; padding: 8px; cursor: pointer;
+            background: #15151a; color: #aaa; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 6px; font-family: 'Consolas', monospace; font-size: 11px;
+            letter-spacing: 1px; transition: all 0.2s ease;
+        }
+        #wireframe-btn:hover { background: #ffffff; color: #000; border-color: #fff; font-weight: bold; }
+
+        #ui-toggle-btn {
+            position: absolute; bottom: 20px; left: 20px; z-index: 1000;
+            background: rgba(15, 15, 20, 0.75); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px;
+            color: #aaa; padding: 9px 15px; font-family: 'Consolas', monospace; font-size: 11px;
+            cursor: pointer; transition: all 0.2s ease; letter-spacing: 1px; backdrop-filter: blur(15px);
+        }
+        #ui-toggle-btn:hover { color: #fff; border-color: rgba(255,255,255,0.3); }
+
+        #image-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95); z-index: 99999;
+            justify-content: center; align-items: center; flex-direction: column;
+            cursor: pointer; backdrop-filter: blur(5px); pointer-events: auto;
+        }
+        #modal-img { max-width: 90vw; max-height: 80vh; border: 2px solid #555; border-radius: 8px; object-fit: contain; }
+        
+        #crash-screen {
+            display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(200, 0, 0, 0.9); padding: 30px; border: 2px solid white; z-index: 9999;
+            font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
+        }
+
+        /* MOBILNI REŽIM */
+        @media (max-width: 768px) {
+            #nav-header { width: 90%; justify-content: center; top: 12px; }
+            .tab-btn { padding: 6px 10px; font-size: 9px; }
+
+            #floating-toolbar { display: flex; }
+
+            /* Na mobilnom su ostali paneli ZATVORENI po defaultu dok se ne klikne */
+            #left-container > .panel-box:not(#panel-sliders) { display: none; }
+            /* Dodato !important da overriduje selektor iznad kada tab postane aktivan */
+            #left-container > .panel-box.active-panel { display: block !important; }
+
+            #left-container { 
+                top: 115px; left: 15px; right: 15px; 
+                width: auto; max-height: 35vh; 
+            }
+
+            /* Slajderi fiksirani na dnu, STALNO OTVORENI I VIDLJIVI */
+            #panel-sliders {
+                position: fixed; bottom: 55px; left: 15px; right: 15px;
+                width: auto !important; display: block !important; z-index: 1000;
+                max-height: 25vh; overflow-y: auto;
+            }
+
+            /* --- HIDE UI i TOGGLE TOPOLOGY (Perfektno poravnanje po visini) --- */
+            #ui-toggle-btn, #wireframe-btn {
+                position: fixed !important; 
+                bottom: 15px !important; 
+                height: 32px !important; /* Fiksna i identična visina za oba dugmeta */
+                box-sizing: border-box !important;
+                margin: 0 !important;
+                padding: 0 12px !important; 
+                font-size: 9px !important; 
+                z-index: 1000;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                border-radius: 8px !important;
+            }
+
+            /* HIDE UI levo */
+            #ui-toggle-btn {
+                left: 15px !important;
+            }
+
+            /* TOGGLE TOPOLOGY uži i centriran */
+            #wireframe-btn {
+                left: 50% !important; 
+                transform: translateX(-50%) !important;
+                width: auto !important; 
+                min-width: unset !important; 
+                max-width: unset !important; 
+                background: rgba(15, 15, 20, 0.9); 
+                backdrop-filter: blur(15px);
+                white-space: nowrap; 
+            }
+        }
     </style>
 </head>
 <body>
-    <div id="loading-screen"><div>LOADING GEOMETRY...</div></div>
+
+    <div id="loading-screen">
+        <div>LOADING GEOMETRY & TEXTURES...</div>
+        <div style="font-size: 10px; color: #aaa; margin-top: 10px;">Please wait</div>
+    </div>
+
+    <div id="crash-screen">
+        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
+        <p id="crash-log">Check your models folder. Are filenames case-sensitive?</p>
+    </div>
+
     <div id="nav-header">
         <button id="btn-stress" class="tab-btn active" onclick="switchSimulation('stress')">CORTISOL RESPONSE</button>
         <button id="btn-face" class="tab-btn" onclick="switchSimulation('face')">CRANIOFACIAL RESHAPING</button>
     </div>
+
+    <!-- Mobilni toolbar -->
+    <div id="floating-toolbar">
+        <button class="tool-btn" onclick="togglePanel('stats', this)">📊 Stats</button>
+        <button class="tool-btn" onclick="togglePanel('scene', this)">💡 Scene</button>
+        <button class="tool-btn" onclick="togglePanel('textures', this)">🎨 Textures</button>
+    </div>
+
     <button id="ui-toggle-btn">HIDE UI</button>
+
+    <div id="image-modal" onclick="this.style.display='none'">
+        <img id="modal-img" src="" alt="Texture Preview">
+        <div style="margin-top: 15px; color: #aaa; font-size: 12px; letter-spacing: 1px;">CLICK ANYWHERE TO CLOSE</div>
+    </div>
+
+    <!-- Levi kontejner (Svi elementi unutar sidebara na desktopu) -->
     <div id="left-container">
-        <div id="stats-panel" class="panel-box"><strong>STATISTICS</strong><br>FPS: <span id="fps" class="stat-val">0</span><br>Total Tris: <span id="tris" class="stat-val">0</span></div>
-        <div id="tex-gallery"></div>
-    </div>
-    <div id="ui-panel">
-        <div id="stress-controls" class="panel-section active"><input type="range" id="stressSlider" min="0" max="1" step="0.01" value="0"></div>
-        <div id="face-controls" class="panel-section"><input type="range" id="humpSlider" class="face-slider" min="0" max="1" step="0.01" value="1"></div>
+        
+        <!-- 1. STATS PANEL -->
+        <div id="panel-stats" class="panel-box">
+            <div id="stats-panel">
+                <strong>STATISTICS</strong><br>
+                FPS: <span id="fps" class="stat-val">0</span><br>
+                Total Tris: <span id="tris" class="stat-val">0</span><br>
+                Total Verts: <span id="verts" class="stat-val">0</span><br>
+                Total Size: <span id="fileSize" class="stat-val">Calculating...</span>
+            </div>
+        </div>
+
+        <!-- 2. TEXTURES PANEL -->
+        <div id="panel-textures" class="panel-box">
+            <div style="font-size: 10px; color: #999; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Texture Maps</div>
+            <div id="tex-gallery"></div>
+        </div>
+
+        <!-- 3. SCENE PANEL -->
+        <div id="panel-scene" class="panel-box">
+            <div class="slider-group" style="margin-top: 0;">
+                <div class="slider-label">TONEMAPPING</div>
+                <select id="tonemapSelect">
+                    <option value="aces" selected>ACES (Cinematic)</option>
+                    <option value="standard">Standard (Filmic)</option>
+                    <option value="none">None (Linear)</option>
+                </select>
+            </div>
+            <div class="slider-group" style="margin-top: 10px;">
+                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.0</span></div>
+                <input type="range" id="iblSlider" min="0" max="4" step="0.1" value="1.0">
+            </div>
+        </div>
+
+        <!-- 4. SLIDERS PANEL (Na desktopu u nizu, a na mobilnom se odvaja dole uvek aktivan) -->
+        <div id="panel-sliders" class="panel-box">
+            <div id="stress-controls" class="panel-section active">
+                <div class="slider-group" style="margin-top: 0;">
+                    <div class="slider-label" style="justify-content: center; color: #ff4d4d; letter-spacing: 2px;"><span>CORTISOL / STRESS</span></div>
+                    <input type="range" id="stressSlider" class="stress-slider" min="0" max="1" step="0.01" value="0">
+                </div>
+            </div>
+
+            <div id="face-controls" class="panel-section">
+                <div class="slider-group" style="margin-top: 0;">
+                    <div class="slider-label"><span>NASAL DORSAL HUMP</span> <span id="humpVal" class="slider-val">1.00</span></div>
+                    <input type="range" id="humpSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label"><span>CHIN RETROGNATHIA</span> <span id="chinVal" class="slider-val">1.00</span></div>
+                    <input type="range" id="chinSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label"><span>SUBMENTAL FAT</span> <span id="fatVal" class="slider-val">1.00</span></div>
+                    <input type="range" id="fatSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
+                </div>
+            </div>
+        </div>
+
+        <!-- TOGGLE TOPOLOGY TASTER -->
         <button id="wireframe-btn">TOGGLE TOPOLOGY</button>
+
     </div>
+
     <canvas id="renderCanvas"></canvas>
+
     <script>
+        // Univerzalna funkcija za otvaranje/zatvaranje panela na mobilnom kliku
+        function togglePanel(panelName, btn) {
+            if (window.innerWidth > 768) return; // Na desktopu ne radi ništa, sve je uvek otvoreno
+            
+            const panel = document.getElementById('panel-' + panelName);
+            const isOpen = panel.classList.contains('active-panel');
+            
+            // Zatvori sve ostale panele osim Sliders (koji je uvek aktivan)
+            document.querySelectorAll('#left-container > .panel-box:not(#panel-sliders)').forEach(box => box.classList.remove('active-panel'));
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            
+            // Otvori onaj na koji je kliknuto, ukoliko nije bio već otvoren (toggle efekat)
+            if (!isOpen) {
+                panel.classList.add('active-panel');
+                btn.classList.add('active');
+            }
+        }
+
+        const uiToggleBtn = document.getElementById("ui-toggle-btn");
+        const leftContainer = document.getElementById("left-container");
+        const floatingToolbar = document.getElementById("floating-toolbar");
+        let uiVisible = true;
+
+        uiToggleBtn.addEventListener("click", () => {
+            uiVisible = !uiVisible;
+            if(uiVisible) {
+                leftContainer.classList.remove("hidden");
+                if (window.innerWidth <= 768) floatingToolbar.classList.remove("hidden");
+                uiToggleBtn.innerText = "HIDE UI";
+            } else {
+                leftContainer.classList.add("hidden");
+                floatingToolbar.classList.add("hidden");
+                uiToggleBtn.innerText = "SHOW UI";
+            }
+        });
+
         const canvas = document.getElementById("renderCanvas");
         const engine = new BABYLON.Engine(canvas, true);
+
         let currentScene = null;
         let isWireframe = false;
 
+        const sceneDefaults = {
+            stress: { ibl: 1.0, tonemap: "aces" },
+            face:   { ibl: 1.0, tonemap: "aces" }
+        };
+
+        document.getElementById("wireframe-btn").addEventListener("click", () => {
+            isWireframe = !isWireframe;
+            const btn = document.getElementById("wireframe-btn");
+            btn.style.color = isWireframe ? "#ffffff" : "#aaa";
+            btn.style.borderColor = isWireframe ? "#ffffff" : "rgba(255,255,255,0.1)";
+            if(currentScene) {
+                currentScene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
+            }
+        });
+
+        document.getElementById("tonemapSelect").addEventListener("change", (e) => {
+            if(!currentScene) return;
+            if (e.target.value === "aces") {
+                currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
+                currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+            } else if (e.target.value === "standard") {
+                currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
+                currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
+            } else {
+                currentScene.imageProcessingConfiguration.toneMappingEnabled = false;
+            }
+        });
+
+        document.getElementById("iblSlider").addEventListener("input", (e) => {
+            const val = parseFloat(e.target.value);
+            document.getElementById("iblVal").innerText = val.toFixed(1);
+            if(currentScene) currentScene.environmentIntensity = val;
+        });
+
         const loadSimulation = async function (type) {
-            if (currentScene) currentScene.dispose();
+            
+            document.getElementById('loading-screen').style.display = 'flex';
+            document.getElementById('crash-screen').style.display = 'none';
+
+            if (currentScene) {
+                currentScene.dispose();
+            }
+
+            const defaultLighting = sceneDefaults[type] || { ibl: 1.0, tonemap: "aces" };
+            document.getElementById("iblSlider").value = defaultLighting.ibl;
+            document.getElementById("iblVal").innerText = defaultLighting.ibl.toFixed(1);
+            document.getElementById("tonemapSelect").value = defaultLighting.tonemap;
+
             const scene = new BABYLON.Scene(engine);
             scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
-            scene.imageProcessingConfiguration.toneMappingEnabled = true;
-            scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-            
-            const camera = new BABYLON.ArcRotateCamera("cam", Math.PI/2, Math.PI/2, 5, BABYLON.Vector3.Zero(), scene);
-            camera.attachControl(canvas, true);
-            scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
-            
-            const modelFilename = type === 'stress' ? "human_stress_v01.glb" : "anatomical-morph-viewer.glb";
-            await BABYLON.SceneLoader.AppendAsync("./models/", modelFilename, scene);
-            document.getElementById('loading-screen').style.display = 'none';
 
-            if (type === 'stress') {
-                let vagusMat = scene.materials.find(m => m.name && m.name.toLowerCase().includes("vagus"));
-                const slider = document.getElementById("stressSlider");
-                scene.onBeforeRenderObservable.add(() => {
-                    const stressLevel = parseFloat(slider.value);
-                    const stressColor = BABYLON.Color3.Lerp(new BABYLON.Color3(0.1, 0.4, 1.0), new BABYLON.Color3(1.0, 0.0, 0.0), stressLevel);
-                    if (vagusMat) {
-                        vagusMat.emissiveColor = stressColor;
-                        vagusMat.emissiveIntensity = stressLevel * 4;
+            const tmVal = document.getElementById("tonemapSelect").value;
+            scene.imageProcessingConfiguration.toneMappingEnabled = tmVal !== "none";
+            if(tmVal === "aces") scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
+            if(tmVal === "standard") scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
+            scene.imageProcessingConfiguration.exposure = type === 'face' ? 1.0 : 1.6;
+            scene.imageProcessingConfiguration.contrast = 1;
+
+            const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 5, BABYLON.Vector3.Zero(), scene);
+            camera.attachControl(canvas, true);
+            camera.wheelPrecision = 100; 
+            camera.pinchPrecision = 200; 
+            camera.minZ = 0.01; 
+            camera.lowerRadiusLimit = 1.8; 
+            camera.upperRadiusLimit = 20.0;
+
+            const envFile = type === 'face' ? "environmentSpecular.env": "studio.env";
+            scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData(`https://assets.babylonjs.com/environments/${envFile}`, scene);
+            scene.environmentIntensity = defaultLighting.ibl;
+
+            const extraLight = new BABYLON.HemisphericLight("extraLight", new BABYLON.Vector3(0, 1, 0), scene);
+            extraLight.intensity = type === 'face' ? 0.0 : 0.5;
+            extraLight.groundColor = new BABYLON.Color3(0.05, 0.05, 0.05);
+
+            const stressLight = new BABYLON.DirectionalLight("stressLight", new BABYLON.Vector3(-1, -2, -1), scene);
+            stressLight.position = new BABYLON.Vector3(20, 40, 20);
+            stressLight.diffuse = new BABYLON.Color3(1.0, 0.0, 0.0); 
+            stressLight.intensity = 0; 
+
+            const glowLayer = new BABYLON.GlowLayer("glow", scene);
+            glowLayer.intensity = 0; 
+
+            const modelFilename = type === 'stress' ? "human_stress_v01.glb" : "anatomical-morph-viewer.glb";
+
+            try {
+                await BABYLON.SceneLoader.AppendAsync("./models/", modelFilename, scene);
+                
+                document.getElementById('loading-screen').style.display = 'none';
+
+                const worldExtends = scene.getWorldExtends();
+                const center = worldExtends.min.add(worldExtends.max).scale(0.5);
+                camera.setTarget(center);
+
+                scene.executeWhenReady(() => {
+                    camera.useFramingBehavior = true;
+                    const framingBehavior = camera.getBehaviorByName("Framing");
+                    if (framingBehavior) {
+                        framingBehavior.framingTime = 0;
+                        framingBehavior.elevationReturnTime = -1;
+                        framingBehavior.zoomOnMeshesHierarchy(scene.meshes);
                     }
                 });
+
+                scene.materials.forEach(mat => {
+                    if (mat) mat.wireframe = isWireframe;
+                    if (mat instanceof BABYLON.PBRMaterial) {
+                        const matName = mat.name ? mat.name.toLowerCase() : "";
+                        if (!matName.includes("vagus") && !matName.includes("glass")) {
+                            if (mat.metallicTexture) {
+                                mat.ambientTexture = mat.metallicTexture;
+                                mat.useAmbientOcclusionFromMetallicTextureRed = true;
+                                mat.ambientTextureStrength = 1.0; 
+                                mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
+                                mat.markDirty();
+                            }
+                        }
+                    }
+                });
+
+                if (scene.animationGroups && scene.animationGroups.length > 0) {
+                    scene.animationGroups.forEach(anim => anim.play(true));
+                }
+
+                let totalTris = 0;
+                let totalVerts = 0;
+                scene.meshes.forEach(m => {
+                    totalVerts += m.getTotalVertices() || 0;
+                    const indices = m.getIndices();
+                    if (indices) totalTris += (indices.length / 3);
+                });
+                document.getElementById("tris").innerText = Math.round(totalTris).toLocaleString();
+                document.getElementById("verts").innerText = totalVerts.toLocaleString();
+
+                document.getElementById("fileSize").innerText = "Calculating...";
+                fetch(`./models/${modelFilename}`, { method: 'HEAD' })
+                    .then(res => {
+                        const totalBytes = parseInt(res.headers.get('content-length') || 0, 10);
+                        if (totalBytes > 0) {
+                            document.getElementById("fileSize").innerText = (totalBytes / (1024 * 1024)).toFixed(2) + " MB";
+                        } else {
+                            document.getElementById("fileSize").innerText = "Ready";
+                        }
+                    })
+                    .catch(() => { document.getElementById("fileSize").innerText = "Unknown"; });
+
+                const gallery = document.getElementById("tex-gallery");
+                gallery.innerHTML = '';
+
+                const fpsElem = document.getElementById("fps");
+
+                if (type === 'stress') {
+                    let vagusMat = scene.materials.find(m => m.name && (m.name.toLowerCase().includes("mat_vagus_glow") || m.name.toLowerCase().includes("vagus")));
+                    let originalVagusColor = new BABYLON.Color3(0, 0, 0);
+                    let originalVagusIntensity = 1.0;
+
+                    if (vagusMat) {
+                        if (vagusMat.emissiveColor) originalVagusColor = vagusMat.emissiveColor.clone();
+                        if (vagusMat.emissiveIntensity !== undefined) originalVagusIntensity = vagusMat.emissiveIntensity;
+                    }
+
+                    const textureFiles = [
+                        { file: "body_baseColor_512.jpg", full: "body_baseColor_512.jpg", label: "Base Color" },
+                        { file: "body_normal_512.jpg", full: "body_normal_512.jpg", label: "Normal" },
+                        { file: "body_occlusionRoughnessMetallic_512.jpg", full: "body_occlusionRoughnessMetallic_512.jpg", label: "ORM Map" }
+                    ];
+
+                    textureFiles.forEach(tex => {
+                        let box = document.createElement("div");
+                        box.className = "tex-box";
+                        const previewPath = `./models/${tex.file}`;
+                        box.style.backgroundImage = `url('${previewPath}')`;
+                        box.onclick = (e) => {
+                            e.stopPropagation(); 
+                            document.getElementById('modal-img').src = `./models/${tex.full}`;
+                            document.getElementById('image-modal').style.display = 'flex';
+                        };
+                        let label = document.createElement("div");
+                        label.className = "tex-label";
+                        label.innerText = tex.label;
+                        box.appendChild(label);
+                        gallery.appendChild(box);
+                    });
+
+                    const slider = document.getElementById("stressSlider");
+                    
+                    scene.onBeforeRenderObservable.add(() => {
+                        let currentFps = engine.getFps();
+                        fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
+                        
+                        const stressLevel = parseFloat(slider.value);
+                        stressLight.intensity = stressLevel * 0.8; 
+
+                        if (scene.animationGroups) {
+                            const speed = 1.0 + (stressLevel * 3.0); 
+                            scene.animationGroups.forEach(anim => anim.speedRatio = speed);
+                        }
+
+                        if (vagusMat) {
+                            const peakColor = new BABYLON.Color3(1.0, 0.0, 0.0); 
+                            vagusMat.emissiveColor = BABYLON.Color3.Lerp(originalVagusColor, peakColor, stressLevel);
+                            vagusMat.emissiveIntensity = originalVagusIntensity + (stressLevel * 50.0); 
+                            glowLayer.intensity = stressLevel * 1.5;
+                        }
+                    });
+                } 
+                else if (type === 'face') {
+                    const faceTextures = [
+                        { file: "head_baseColor_512.jpg", full: "head_baseColor_512.jpg", label: "Base Color" },
+                        { file: "head_normal_512.jpg", full: "head_normal_512.jpg", label: "Normal" },
+                        { file: "head_occlusionRoughnessMetallic_512.jpg", full: "head_occlusionRoughnessMetallic_512.jpg", label: "ORM Map" }
+                    ];
+
+                    faceTextures.forEach(tex => {
+                        let box = document.createElement("div");
+                        box.className = "tex-box";
+                        const previewPath = `./models/${tex.file}`;
+                        box.style.backgroundImage = `url('${previewPath}')`;
+                        box.onclick = (e) => {
+                            e.stopPropagation(); 
+                            document.getElementById('modal-img').src = `./models/${tex.full}`;
+                            document.getElementById('image-modal').style.display = 'flex';
+                        };
+                        let label = document.createElement("div");
+                        label.className = "tex-label";
+                        label.innerText = tex.label;
+                        box.appendChild(label);
+                        gallery.appendChild(box);
+                    });
+
+                    let headMesh = null;
+                    scene.meshes.forEach(mesh => {
+                        if (mesh.morphTargetManager) headMesh = mesh;
+                    });
+
+                    if (headMesh && headMesh.morphTargetManager) {
+                        for (let i = 0; i < headMesh.morphTargetManager.numTargets; i++) {
+                            headMesh.morphTargetManager.getTarget(i).influence = 1.0;
+                        }
+                    }
+
+                    const morphSliders = [
+                        { sliderId: "humpSlider", valId: "humpVal", index: 0 },
+                        { sliderId: "chinSlider", valId: "chinVal", index: 1 },
+                        { sliderId: "fatSlider",  valId: "fatVal",  index: 2 }
+                    ];
+
+                    scene.onBeforeRenderObservable.add(() => {
+                        let currentFps = engine.getFps();
+                        fpsElem.innerText = isFinite(currentFps) && currentFps > 0 ? currentFps.toFixed() : "60";
+                        
+                        morphSliders.forEach(item => {
+                            const slider = document.getElementById(item.sliderId);
+                            const val = parseFloat(slider.value);
+                            
+                            const label = document.getElementById(item.valId);
+                            if (val === 1) label.innerText = "1.00 (Before)";
+                            else if (val === 0) label.innerText = "0.00 (After)";
+                            else label.innerText = val.toFixed(2);
+
+                            if (headMesh && headMesh.morphTargetManager && headMesh.morphTargetManager.getTarget(item.index)) {
+                                headMesh.morphTargetManager.getTarget(item.index).influence = val;
+                            }
+                        });
+                    });
+                }
+
+                currentScene = scene;
+
+            } catch (error) {
+                document.getElementById('loading-screen').style.display = 'none';
+                document.getElementById('crash-screen').style.display = 'block';
+                console.error("LOAD ERROR:", error);
             }
-            currentScene = scene;
         };
 
         function switchSimulation(type) {
-            document.getElementById('btn-stress').classList.toggle('active', type === 'stress');
-            document.getElementById('btn-face').classList.toggle('active', type === 'face');
-            document.querySelectorAll('.panel-section').forEach(p => p.classList.toggle('active', p.id === `${type}-controls`));
+            document.getElementById('btn-stress').classList.remove('active');
+            document.getElementById('btn-face').classList.remove('active');
+            document.getElementById(`btn-${type}`).classList.add('active');
+
+            document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
+            document.getElementById(`${type}-controls`).classList.add('active');
+
             loadSimulation(type);
         }
+
         loadSimulation('stress');
-        engine.runRenderLoop(() => { if (currentScene) currentScene.render(); });
-        window.addEventListener("resize", () => engine.resize());
+
+        engine.runRenderLoop(() => {
+            if (currentScene) {
+                currentScene.render();
+            }
+        });
+
+        window.addEventListener("resize", function () {
+            engine.resize();
+        });
     </script>
 </body>
 </html>
