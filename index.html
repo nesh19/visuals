@@ -38,7 +38,7 @@
         .tab-btn.active { background: #ffffff; color: #000000; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
         .tab-btn:hover:not(.active) { color: #fff; background: rgba(255,255,255,0.05); }
 
-        /* Floating Toolbar (Prikazuje se SAMO na mobilnom) */
+        /* Floating Toolbar (mobile) */
         #floating-toolbar {
             display: none; position: absolute; top: 70px; left: 15px; right: 15px; z-index: 10;
             flex-direction: row; justify-content: center; gap: 6px;
@@ -52,7 +52,7 @@
         }
         .tool-btn:hover, .tool-btn.active { color: #fff; border-color: rgba(255,255,255,0.4); background: rgba(30, 30, 40, 0.9); }
 
-        /* DESKTOP: Levi Sidebar */
+        /* DESKTOP: left Sidebar */
         #left-container {
             position: absolute; top: 75px; left: 20px; z-index: 9;
             display: flex; flex-direction: column; gap: 12px; width: 280px; max-height: calc(100vh - 100px);
@@ -135,7 +135,7 @@
             font-family: monospace; text-align: center; border-radius: 8px; pointer-events: auto;
         }
 
-        /* MOBILNI REŽIM */
+        /* Mobile */
         @media (max-width: 768px) {
             #nav-header { width: 90%; justify-content: center; top: 12px; }
             .tab-btn { padding: 6px 10px; font-size: 9px; }
@@ -378,6 +378,14 @@
 
             const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 5, BABYLON.Vector3.Zero(), scene);
             camera.attachControl(canvas, true);
+            
+            // Fix initial lag & high sensitivity
+            camera.inertia = 0.7;                // rotation lag
+            camera.panningInertia = 0.5;         // right-click "stuck then jump" panning
+            camera.angularSensibilityX = 1000;   // smoother left-click rotation 
+            camera.angularSensibilityY = 1000;   // smoother vertical rotation
+            camera.panningSensibility = 1500;    // calms right-click drag speed 
+            
             camera.wheelPrecision = 100; 
             camera.pinchPrecision = 200; 
             camera.minZ = 0.01; 
@@ -433,7 +441,7 @@
                                 mat.ambientTextureImpactOnAnalyticalLights = 1.0; 
                             }
 
-                            // Ubačeni Sheen i Iridescence za kožu
+                            // Sheen and Iridescence 
                             if (matName.includes("head") || matName.includes("skin") || matName.includes("body")) {
                                 mat.sheen.isEnabled = true;
                                 mat.sheen.intensity = 0.24;
