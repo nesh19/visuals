@@ -380,10 +380,10 @@
             camera.attachControl(canvas, true);
             
             // Fix initial lag & high sensitivity
-            camera.inertia = 0.7;                // rotation lag
+            camera.inertia = 0.8;                // rotation lag
             camera.panningInertia = 0.5;         // right-click "stuck then jump" panning
-            camera.angularSensibilityX = 1000;   // smoother left-click rotation 
-            camera.angularSensibilityY = 1000;   // smoother vertical rotation
+            camera.angularSensibilityX = 5000;   // smoother left-click rotation 
+            camera.angularSensibilityY = 5000;   // smoother vertical rotation
             camera.panningSensibility = 1500;    // calms right-click drag speed 
             
             camera.wheelPrecision = 100; 
