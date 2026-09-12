@@ -136,16 +136,17 @@ const createScene = async function () {
     const cameraTarget = new BABYLON.Vector3(0, 0, 0); 
     let initialRadius = 11.0;
 
+    const initialAlpha = 1.57; 
+    let initialBeta = 1.25;  
+
     // Apply specific spatial coordinate translation vectors for mobile display frames
     if (isMobilePortrait) {
         cameraTarget.y = 0.3; 
         cameraTarget.x = 0.6; 
         initialRadius = 13.0; 
+        initialBeta = Math.PI / 2; // Establish perfectly flat horizon pitch angle for mobile viewports
     }
-
-    const initialAlpha = 1.57; 
-    const initialBeta = 1.25;  
-
+    
     const camera = new BABYLON.ArcRotateCamera("cam", initialAlpha, initialBeta, initialRadius, cameraTarget, scene);
     camera.attachControl(canvas, true);
     camera.minZ = 0.01; // Restrict transformation boundaries to eliminate clipping nearplane artifacts
@@ -167,16 +168,16 @@ const createScene = async function () {
     // ============================================================================
     const isMobileOrTablet = window.innerWidth < 1200; 
 
-    // Initialize viewport-specific spherical coordinate constraints
+    // Initialize viewport-specific spherical coordinate constraints to prevent boundary clipping
     if (isMobileOrTablet) {
+        // Enforce strict pitch thresholds to block the viewport from tilting into the ceiling matrix
+        camera.lowerBetaLimit = 80 * (Math.PI / 180); 
+        camera.upperBetaLimit = 85 * (Math.PI / 180); 
 
         const alphaRangeMobile = 1.30; 
         camera.lowerAlphaLimit = initialAlpha - alphaRangeMobile; 
         camera.upperAlphaLimit = initialAlpha + alphaRangeMobile;
-        } 
-        else {
-        // Enforce horizontal and vertical projection limits to prevent floor geometry clipping
-
+    } else {
         camera.lowerBetaLimit = 30 * (Math.PI / 180); 
         camera.upperBetaLimit = 100 * (Math.PI / 180); 
 
@@ -520,10 +521,13 @@ const createScene = async function () {
         shaderMaterial.setFloat("beamRadius", CONFIG.beamRadius);
         shaderMaterial.setFloat("realSpeed", CONFIG.baseSpeed + (currentMix * (CONFIG.turboSpeed - CONFIG.baseSpeed)));
         
-        // Execute dynamic point cloud runtime expansion routines depending on turbulence coefficients
-        let dynamicSize = 0.4 + (currentMix * 0.8); 
+        // Sample the hardware pixel density directly to normalize appearance across Android and iOS
+        let hardwareDpr = window.devicePixelRatio || 2.0;
+        let responsiveScale = isMobileOrTablet ? (1.0 / hardwareDpr) * 0.9 : 1.0;
+        
+        let dynamicSize = (0.4 + (currentMix * 0.8)) * responsiveScale; 
         shaderMaterial.setFloat("particleSize", dynamicSize);
-        shaderMaterial.pointSize = dynamicSize; 
+        shaderMaterial.pointSize = dynamicSize;  
         
         // Attenuate transparency scales inside the alpha compositing pipeline as velocity increases
         let dynamicAlpha = 0.15 + (currentMix * 0.30);

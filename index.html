@@ -67,10 +67,11 @@
     </style>
 </head>
 <body>
-    <h1>Technical Artist Portfolio — Select Simulation</h1>
+    <h1> Select Simulation</h1>
     <div class="portfolio-grid">
+        
         <!-- 1. CORTISOL -->
-        <a href="cortisol/index.html" target="_self" class="card">
+        <a href="cortisol/index.html" target="_self" class="card" data-preload="cortisol/assets/human_stress_v01.glb">
             <img src="cortisol/assets/preview_cortisol.webp" alt="Cortisol Response" class="card-img">
             <div class="card-title">The Stress Cascade</div>
             <div class="card-subtitle">HPA Axis Simulation</div>
@@ -79,8 +80,9 @@
                 <p><strong>Concept:</strong> Interactive simulation of the HPA axis biological cascade.<br><br><strong>Tech Solutions:</strong> Engineered in Babylon.js utilizing dynamic PBR material overrides, procedural emission masking, and a deterministic timeline state-machine.</p>
             </div>
         </a>
+        
         <!-- 2. CRANIOFACIAL -->
-        <a href="craniofacial/index.html" target="_self" class="card">
+        <a href="craniofacial/index.html" target="_self" class="card" data-preload="craniofacial/assets/anatomical-morph-viewer.glb">
             <img src="craniofacial/assets/preview_face.webp" alt="Craniofacial Reshaping" class="card-img">
             <div class="card-title">Craniofacial Reshaping</div>
             <div class="card-subtitle"> Interactive Aesthetic Preview</div>
@@ -89,8 +91,9 @@
                 <p><strong>Concept:</strong> Real-time maxillofacial morphological surgery outcomes.<br><br><strong>Tech Solutions:</strong> Powered by the Babylon.js MorphTargetManager optimized for real-time, slider-driven parametric vertex deformation.</p>
             </div>
         </a>
+        
         <!-- 3. WIND TUNNEL -->
-        <a href="windtunnel/index.html" target="_self" class="card">
+        <a href="windtunnel/index.html" target="_self" class="card" data-preload="windtunnel/assets/dron.glb">
             <img src="windtunnel/assets/preview_drone.webp" alt="Wind Tunnel" class="card-img">
             <div class="card-title">Aero Wind Tunnel</div>
             <div class="card-subtitle">Aerodynamic CFD Simulation</div>
@@ -99,25 +102,25 @@
                 <p><strong>Concept:</strong> Real-time aerodynamic wind flow vector simulation over a drone chassis.<br><br><strong>Tech Solutions:</strong> Implemented custom GLSL particle shaders driven by high-precision fluid velocity vector maps baked directly from Blender physics.</p>
             </div>
         </a>
-                <!-- 4. FUTURE RESEARCH & DEVELOPMENT PIPELINE -->
-                <a href="#" class="card coming-soon" style="cursor: default;">
-                    <div class="badge">Coming Soon</div>
+            <!-- 4. FUTURE RESEARCH & DEVELOPMENT PIPELINE -->
+             <a href="#" class="card coming-soon" style="cursor: default;">
+                <div class="badge">Coming Soon</div>
                     
-                     <!-- Normalized low-fidelity asset fallback with desaturation matrix -->
-                    <img src="coming_soon\assets\preview_soon.webp" alt="Future Project" class="card-img" style="filter: grayscale(1) brightness(0.6);">
+                <!-- Normalized low-fidelity asset fallback with desaturation matrix -->
+                <img src="coming_soon\assets\preview_soon.webp" alt="Future Project" class="card-img" style="filter: grayscale(1) brightness(0.6);">
                     
-                    <div class="card-title" style="color: #777;">Next-Gen Project</div>
-                    <div class="card-subtitle" style="color: #555;">In Development</div>
+                <div class="card-title" style="color: #777;">Next-Gen Project</div>
+                <div class="card-subtitle" style="color: #555;">In Development</div>
 
-                    <!-- Contextual overlay containing theoretical implementation parameters -->
-                    <div class="card-overview">
-                        <h3 style="color: #555;">Project Overview</h3>
-                        <p><strong>Concept:</strong> Real-time molecular-level cellular intrusion and viral replication mechanics.<br><br><strong>Tech Solutions:</strong> Spearheading a next-gen WebGPU compute shader pipeline for dynamic soft-body membrane deformation and automated bio-instrument pathfinding.</p>
-                    </div>
-                </a>
+                <!-- Contextual overlay containing theoretical implementation parameters -->
+                <div class="card-overview">
+                    <h3 style="color: #555;">Project Overview</h3>
+                    <p><strong>Concept:</strong> Real-time molecular-level cellular intrusion and viral replication mechanics.<br><br><strong>Tech Solutions:</strong> Spearheading a next-gen WebGPU compute shader pipeline for dynamic soft-body membrane deformation and automated bio-instrument pathfinding.</p>
+                </div>
+            </a>
     
     <!-- MOBILE VISUAL ACCESSIBILITY LAYER -->
-    <script>
+<script>
         // Evaluate hardware capabilities to normalize touch interface lifecycles
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
@@ -125,13 +128,26 @@
             const cards = document.querySelectorAll('.card');
             cards.forEach(card => {
                 card.addEventListener('click', function(e) {
+                    // Ignore "Coming Soon" card to prevent routing errors
+                    if (this.classList.contains('coming-soon')) {
+                        e.preventDefault();
+                        return;
+                    }
+
                     // Check for passive touch state constraint
                     if (!this.classList.contains('touch-active')) {
                         e.preventDefault(); // Intercept default routing vector to reveal contextual text node first
                         cards.forEach(c => c.classList.remove('touch-active'));
                         this.classList.add('touch-active');
+
+                        // SILENT PREFETCH: Download 3D model to cache in the background while user reads
+                        const preloadUrl = this.getAttribute('data-preload');
+                        if (preloadUrl && !this.dataset.prefetched) {
+                            fetch(preloadUrl, { cache: 'force-cache' }).catch(() => {});
+                            this.dataset.prefetched = "true"; // Prevent duplicate downloads
+                        }
+                    } else {
                     }
-                    // Consecutive pointer interaction executes deep linking to the active simulation engine
                 });
             });
 
