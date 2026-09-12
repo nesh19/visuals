@@ -1,0 +1,238 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Inter:wght@400;600&display=swap');
+
+/* ============================================================================
+   GLOBAL NORMALIZATION & BASE CONTEXT GRAPHICS
+   ============================================================================ */
+body {
+    margin: 0; padding: 0; overflow: hidden; height: 100vh; width: 100vw;
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #cbd5e1;
+    touch-action: none;
+    background: radial-gradient(circle at center, #13141a 0%, #030305 100%);
+}
+
+#renderCanvas {
+    width: 100%; height: 100%; display: block; position: absolute; z-index: 1; outline: none;
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='8' fill='none' stroke='%2300e5ff' stroke-width='1.5' opacity='0.7'/%3E%3Ccircle cx='12' cy='12' r='2' fill='%2300e5ff'/%3E%3C/svg%3E") 12 12, auto;
+}
+
+#renderCanvas:active {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='6' fill='none' stroke='%23ff2a55' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='3' fill='%23ff2a55'/%3E%3C/svg%3E") 12 12, auto;
+}
+
+/* ============================================================================
+   TYPOGRAPHY & DIAGNOSTIC INTERFACE STYLES
+   ============================================================================ */
+.stat-val { float: right; color: #f8fafc; font-weight: 600; }
+#fps { color: #00e5ff; font-weight: 700; text-shadow: 0 0 8px rgba(0, 229, 255, 0.4); }
+
+#stats-panel strong {
+    font-family: 'Montserrat', sans-serif;
+    color: #ffffff;
+    font-size: 13px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+}
+
+#stats-panel {
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 600;
+}
+
+/* ============================================================================
+   LAYOUT OBJECT CONTAINERS & HUD PANELS
+   ============================================================================ */
+.panel-box {
+    background: rgba(15, 18, 23, 0.9);
+    border: none;
+    border-left: 3px solid #00e5ff;
+    border-radius: 4px; 
+    padding: 166px 20px; 
+    padding: 16px 20px; 
+    margin-bottom: 16px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+
+/* ============================================================================
+   HARDWARE INPUTS & SLIDER INTERFACE OVERRIDES
+   ============================================================================ */
+.slider-label {
+    font-family: 'Montserrat', sans-serif;
+    color: #94a3b8; 
+    font-size: 10px; 
+    font-weight: 700;
+    letter-spacing: 0.5px; 
+    text-transform: uppercase; 
+    display: flex; 
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.slider-label span:first-child { color: #ffffff; }
+.slider-val { color: #00e5ff !important; }
+
+input[type=range] {
+    -webkit-appearance: none; 
+    appearance: none;
+    background: rgba(255, 255, 255, 0.15); 
+    height: 4px; 
+    width: 100%; 
+    border-radius: 2px;
+    outline: none; 
+    margin-top: 6px; 
+    margin-bottom: 12px;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+
+input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; 
+    appearance: none;
+    width: 20px; 
+    height: 20px; 
+    background: #00e5ff; 
+    border-radius: 50%; 
+    margin: 0 !important;
+    box-shadow: 0 0 4px rgba(0, 229, 255, 0.6); 
+    transition: transform 0.1s;   
+}
+
+input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.3); }
+
+/* Contextual over-rides for secondary timeline activation nodes */
+.stress-slider::-webkit-slider-thumb { background: #ff2a55 !important; box-shadow: 0 0 4px rgba(255, 42, 85, 0.6) !important; }
+#stress-controls .slider-label span:first-child { color: #ff2a55; text-shadow: 0 0 8px rgba(255, 42, 85, 0.3); }
+
+/* ============================================================================
+   INTERACTIVE BUTTONS & DESKTOP SELECTIONS REGISTER
+   ============================================================================ */
+.tab-btn, .tool-btn, #wireframe-btn, #ui-toggle-btn {
+    background: rgba(15, 18, 23, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #94a3b8; 
+    border-radius: 4px; 
+    padding: 10px 18px;
+    font-family: 'Montserrat', sans-serif; 
+    font-size: 10px; 
+    font-weight: 600;
+    letter-spacing: 1px;
+    transition: all 0.2s ease; 
+    cursor: pointer; 
+    text-transform: uppercase;
+}
+
+.tab-btn.active, .tool-btn.active, #wireframe-btn:hover, #ui-toggle-btn:hover {
+    background: rgba(0, 229, 255, 0.1);
+    border-color: #00e5ff; 
+    color: #00e5ff;
+}
+
+select {
+    background: rgba(15, 18, 23, 0.8); 
+    color: #00e5ff; 
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    padding: 8px; 
+    font-family: 'Inter', sans-serif; 
+    font-size: 11px; 
+    font-weight: 600;
+    border-radius: 4px; 
+    width: 100%; 
+    outline: none; 
+    cursor: pointer;
+}
+
+/* ============================================================================
+   COORDINATE MAPPING & SCREEN MATRIX POSITIONING
+   ============================================================================ */
+#nav-header { position: absolute; top: 25px; left: 50%; transform: translateX(-50%); display: flex; gap: 8px; z-index: 10; padding: 6px; border-radius: 6px; backdrop-filter: blur(10px); }
+#left-container { position: absolute; top: 25px; left: 25px; width: 300px; z-index: 9; display: flex; flex-direction: column; }
+#left-container.hidden { transform: translateX(-120%); opacity: 0; }
+#ui-toggle-btn { position: absolute; bottom: 30px; left: 30px; z-index: 1000; }
+#floating-toolbar { display: none; }
+
+.panel-section { display: none; }
+.panel-section.active { display: block; }
+
+#loading-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #030305; z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center; letter-spacing: 2px; font-size: 12px; color: #00e5ff; font-family: 'Montserrat', sans-serif; font-weight: 600; }
+#image-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(3, 3, 5, 0.95); z-index: 99999; justify-content: center; align-items: center; flex-direction: column; cursor: pointer; backdrop-filter: blur(8px); }
+#modal-img { max-width: 90vw; max-height: 80vh; border: 2px solid #00e5ff; border-radius: 4px; box-shadow: 0 0 40px rgba(0,229,255,0.2); }
+
+/* ============================================================================
+   MOBILE RESPONSIVE VIEWPORT ENGINE OVERRIDES
+   ============================================================================ */
+@media (max-width: 1024px) {
+    #floating-toolbar { 
+        display: flex; position: absolute; top: 10px; left: 15px; right: 15px; 
+        z-index: 10; gap: 6px; justify-content: center; 
+    }
+    .tool-btn {
+        flex: 1; padding: 10px; font-size: 10px; text-align: center;
+        background: rgba(15, 18, 23, 0.9); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 4px; color: #94a3b8; font-family: 'Montserrat', sans-serif;
+    }
+    .tool-btn.active { color: #00e5ff; border-color: #00e5ff; }
+
+    #left-container { 
+        top: 75px; left: 15px; right: 15px; width: auto; 
+        pointer-events: none !important; 
+    }
+    
+    #left-container > .panel-box { display: none; }
+    
+    #left-container > .panel-box.active-panel { 
+        display: block !important; 
+        pointer-events: auto !important; 
+    }
+    
+    #panel-sliders {
+        position: fixed; 
+        bottom: 50px; 
+        left: 15px; 
+        right: 15px;
+        margin-bottom: 0; 
+        display: block !important; 
+        width: auto !important;
+        z-index: 1000;
+        pointer-events: auto !important;
+    }
+
+    #ui-toggle-btn { 
+        position: fixed !important; 
+        bottom: 10px !important; 
+        left: 15px !important; 
+        z-index: 2000 !important; 
+        width: auto !important;
+        pointer-events: auto !important;
+    }
+    
+    #wireframe-btn { 
+        position: fixed !important; 
+        bottom: 10px !important; 
+        right: 15px !important; 
+        left: auto !important;
+        top: auto !important;
+        width: auto !important; 
+        max-width: none !important;
+        padding: 10px 14px !important; 
+        margin: 0 !important; 
+        z-index: 99999 !important;
+        pointer-events: auto !important;
+        display: block !important;
+    }
+    .mobile-hide { display: none !important; }
+}
+
+/* ============================================================================
+   GLOBAL POINTER CURSOR VECTOR DEFINITIONS (STEADY & ACTIVE MATRIX States)
+   ============================================================================ */
+body, a, .card, button, select, input[type=range], .slider-label, .panel-box, .tab-btn, .tool-btn, #back-btn {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='8' fill='none' stroke='%2300e5ff' stroke-width='1.5' opacity='0.7'/%3E%3Ccircle cx='12' cy='12' r='2' fill='%2300e5ff'/%3E%3C/svg%3E") 12 12, auto !important;
+}
+
+body:active, a:active, .card:active, button:active, select:active, input[type=range]:active, .tab-btn:active, .tool-btn:active, #back-btn:active {
+    cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='6' fill='none' stroke='%23ff2a55' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='3' fill='%23ff2a55'/%3E%3C/svg%3E") 12 12, auto !important;
+}

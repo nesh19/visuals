@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Craniofacial Reshaping | nesh19</title>
+
+    <!-- Core layout styling pipeline -->
+    <link rel="stylesheet" href="../style.css">
+
+    <!-- Viewport-specific layouts for cross-device window matrix normalization -->
+    <style>
+        #left-container {
+            overflow-y: auto !important;
+            scrollbar-width: none;
+            box-sizing: border-box;
+            height: calc(100vh - 80px); 
+            padding-bottom: 10px !important; 
+        }
+        #left-container::-webkit-scrollbar { display: none; }
+
+        @media (min-width: 769px) {
+            #ui-toggle-btn { position: fixed !important; bottom: 20px !important; z-index: 9999; }
+        }
+    </style>
+    
+    <!-- High-performance rendering injection vectors and GPU texture transcoders -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://preview.babylonjs.com/ktx2Decoder/babylon.ktx2Decoder.js"></script>
+</head>
+<body>
+
+    <!-- Blocking runtime loading mask prevents premature asset flash transitions -->
+    <div id="loading-screen">
+        <div>LOADING GEOMETRY & TEXTURES...</div>
+        <div style="font-size: 10px; color: #aaa; margin-top: 10px;">Please wait</div>
+    </div>
+
+    <!-- Fallback error interception interface for missing or corrupt network payloads -->
+    <div id="crash-screen">
+        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
+        <p id="crash-log">Check your models folder. Are filenames case-sensitive?</p>
+    </div>
+
+    <!-- Mobile view touch-optimized interface layout navigation components -->
+    <div id="floating-toolbar">
+        <a href="../index.html" class="tool-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Main Menu</a>
+        <button class="tool-btn" data-panel="stats">Stats</button>
+        <button class="tool-btn" data-panel="scene">Scene</button>
+    </div>
+
+    <!-- Primary interface visibility state controller button -->
+    <button id="ui-toggle-btn">HIDE UI</button>
+
+    <div id="left-container">
+        
+        <!-- Top-level dashboard routing interface vector -->
+        <a href="../index.html" class="panel-box mobile-hide" style="text-align: left; text-decoration: none; color: #fff; font-weight: bold; font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 2px; padding: 12px; cursor: pointer; border-left-color: #ff2a55;">
+            ← MAIN MENU
+        </a>
+
+        <!-- Runtime graphics hardware diagnostic profiling telemetry block -->
+        <div id="panel-stats" class="panel-box">
+            <div id="stats-panel">
+                <strong>STATISTICS</strong><br>
+                FPS: <span id="fps" class="stat-val">0</span><br>
+                Total Tris: <span id="tris" class="stat-val">0</span><br>
+                Total Verts: <span id="verts" class="stat-val">0</span><br>
+                Total Size: <span id="fileSize" class="stat-val">Calculating...</span>
+            </div>
+        </div>
+
+        <!-- Parametric morphological deformation input controller fields -->
+        <div id="panel-sliders" class="panel-box">
+            <div id="face-controls" class="panel-section active">
+                <div class="slider-group" style="margin-top: 0;">
+                    <div class="slider-label"><span>NASAL DORSAL HUMP</span> <span id="humpVal" class="slider-val">1.00 (BEFORE)</span></div>
+                    <input type="range" id="humpSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label"><span>CHIN RETROGNATHIA</span> <span id="chinVal" class="slider-val">1.00 (BEFORE)</span></div>
+                    <input type="range" id="chinSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
+                </div>
+                <div class="slider-group">
+                    <div class="slider-label"><span>SUBMENTAL FAT</span> <span id="fatVal" class="slider-val">1.00 (BEFORE)</span></div>
+                    <input type="range" id="fatSlider" class="face-slider" min="0" max="1" step="0.01" value="1">
+                </div>
+            </div>
+        </div>
+
+        <!-- Rendering space tonemapping filters and environment radiance settings -->
+        <div id="panel-scene" class="panel-box">
+            <div class="slider-group" style="margin-top: 0;">
+                <div class="slider-label">TONEMAPPING</div>
+                <select id="tonemapSelect">
+                    <option value="aces" selected>ACES (Cinematic)</option>
+                    <option value="standard">Standard (Filmic)</option>
+                    <option value="none">None (Linear)</option>
+                </select>
+            </div>
+            <div class="slider-group" style="margin-top: 10px;">
+                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.0</span></div>
+                <input type="range" id="iblSlider" min="0" max="4" step="0.1" value="1.0">
+            </div>
+        </div>
+
+        <!-- Structural wireframe topological rendering override trigger -->
+        <button id="wireframe-btn" style="margin-bottom: 20px;">TOGGLE TOPOLOGY</button>
+
+    </div> 
+
+    <canvas id="renderCanvas"></canvas>
+
+    <!-- Execution layers binding core behaviors to the markup selectors -->
+    <script src="js/ui.js" defer></script>
+    <script src="js/app.js" defer></script>
+</body>
+</html>

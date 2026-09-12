@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aero Wind Tunnel | nesh19</title>
+    
+    <!-- Core layout stylesheet -->
+    <link rel="stylesheet" href="../style.css">
+    
+    <!-- Viewport-specific style overrides for deep desktop/mobile normalization -->
+    <style>
+        #left-container {
+            overflow-y: auto !important;
+            scrollbar-width: none;
+            box-sizing: border-box;
+            height: calc(100vh - 80px); 
+            padding-bottom: 10px !important; 
+        }
+        #left-container::-webkit-scrollbar { display: none; }
+
+        @media (min-width: 769px) {
+            #ui-toggle-btn { position: fixed !important; bottom: 20px !important; z-index: 9999; }
+        }
+
+        #telemetry {
+            font-family: 'Montserrat', sans-serif; 
+            font-weight: 700; 
+            font-size: 10px;
+            letter-spacing: 1px; 
+            margin-bottom: 15px; 
+            color: #94a3b8;
+        }
+        .stat { margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .stat span:last-child { color: #fff; font-size: 11px; }
+        .active-stat span:last-child, .active-stat { color: #00e5ff !important; }
+        .danger-stat span:last-child, .danger-stat { color: #ff2a55 !important; }
+    </style>
+    
+    <!-- CDN Deployment Vectors for Babylon.js Runtime Environment -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+</head>
+<body>
+
+    <!-- Asset pipeline blocking state handler -->
+    <div id="loading-screen">
+        <div>LOADING GEOMETRY & TEXTURES...</div>
+        <div style="font-size: 10px; color: #aaa; margin-top: 10px;">Please wait</div>
+    </div>
+
+    <!-- Exception catching layer to flag repository payload infrastructure faults -->
+    <div id="crash-screen" style="display: none;">
+        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
+        <p id="crash-log">Check your models folder. Are filenames case-sensitive?</p>
+    </div>
+
+    <!-- Responsive layout dashboard controls -->
+    <div id="floating-toolbar">
+        <a href="../index.html" class="tool-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Main Menu</a>
+        <button class="tool-btn" data-panel="stats">Stats</button>
+        <button class="tool-btn" data-panel="scene">Scene</button>
+    </div>
+
+    <!-- Global interface visibility controller Toggle -->
+    <button id="ui-toggle-btn">HIDE UI</button>
+
+    <div id="left-container">
+        
+        <!-- Primary dashboard routing vector -->
+        <a href="../index.html" class="panel-box mobile-hide" style="text-align: left; text-decoration: none; color: #fff; font-weight: bold; font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 2px; padding: 12px; cursor: pointer; border-left-color: #ff2a55;">
+            ← MAIN MENU
+        </a>
+
+        <!-- Runtime engine diagnostic tracking node -->
+        <div id="panel-stats" class="panel-box">
+            <div id="stats-panel">
+                <strong>STATISTICS</strong><br>
+                FPS: <span id="fps" class="stat-val">0</span><br>
+                Total Tris: <span id="tris" class="stat-val">0</span><br>
+                Total Verts: <span id="verts" class="stat-val">0</span><br>
+                Total Size: <span id="fileSize" class="stat-val">Calculating...</span>
+            </div>
+        </div>
+
+        <!-- Real-time computational fluid dynamics telemetry matrix -->
+        <div id="panel-sliders" class="panel-box">
+            <div id="telemetry">
+                <div class="stat"><span>WIND SPEED:</span> <span id="wind-speed-text">1.0 m/s</span></div>
+                <div class="stat"><span>REYNOLDS NO:</span> <span id="reynolds-text">7.50E+4</span></div>
+                <div class="stat active-stat" id="flow-status-text"><span>FLOW REGIME: LAMINAR</span></div>
+                <div class="stat"><span id="vortex-text">VORTEX INTENSITY: 0%</span></div>
+            </div>
+            
+            <div class="slider-group" style="margin-top: 15px;">
+                <div class="slider-label"><span style="color: #00e5ff;">ACTIVE AERODYNAMICS</span></div>
+                <input type="range" id="brakeSlider" min="0" max="1" step="0.01" value="0">
+            </div>
+        </div>
+
+        <!-- Render loop environment context parameters -->
+        <div id="panel-scene" class="panel-box">
+            <div class="slider-group" style="margin-top: 0;">
+                <div class="slider-label">TONEMAPPING</div>
+                <select id="tonemapSelect">
+                    <option value="aces" selected>ACES (Cinematic)</option>
+                    <option value="standard">Standard (Filmic)</option>
+                    <option value="none">None (Linear)</option>
+                </select>
+            </div>
+            <div class="slider-group" style="margin-top: 10px;">
+                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.0</span></div>
+                <input type="range" id="iblSlider" min="0" max="4" step="0.1" value="1.0">
+            </div>
+        </div>
+
+        <!-- Mesh wireframe hardware toggle register -->
+        <button id="wireframe-btn" style="margin-bottom: 20px;">TOGGLE TOPOLOGY</button>
+
+    </div> 
+
+    <!-- High-performance WebGL context paint target -->
+    <canvas id="renderCanvas"></canvas>
+    
+    <!-- Modular execution layer registration -->
+    <script src="js/ui.js" defer></script>
+    <script src="js/app.js" defer></script>
+</body>
+</html>

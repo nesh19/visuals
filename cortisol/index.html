@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cortisol Response | nesh19</title>
+    
+    <!-- Core layout stylesheet binding -->
+    <link rel="stylesheet" href="../style.css">
+
+    <!-- Viewport-specific responsive style overrides for device layout consistency -->
+    <style>
+        #left-container {
+            overflow-y: auto !important;
+            scrollbar-width: none;
+            box-sizing: border-box;
+            height: calc(100vh - 80px); 
+            padding-bottom: 10px !important; 
+        }
+        #left-container::-webkit-scrollbar { display: none; }
+
+        @media (min-width: 769px) {
+            #ui-toggle-btn { position: fixed !important; bottom: 20px !important; z-index: 9999; }
+        }
+    </style>
+    
+    <!-- Ingest primary WebGL graphics framework and hardware transcoders -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+    <script src="https://preview.babylonjs.com/ktx2Decoder/babylon.ktx2Decoder.js"></script>
+</head>
+<body>
+
+    <!-- Blocking runtime asset aggregation loading layout -->
+    <div id="loading-screen">
+        <div>LOADING GEOMETRY & TEXTURES...</div>
+        <div style="font-size: 10px; color: #aaa; margin-top: 10px;">Please wait</div>
+    </div>
+
+    <!-- Exception intercept handler to display network repository stream faults -->
+    <div id="crash-screen">
+        <h2 style="margin-top:0;">⚠️ MODEL LOAD FAILED</h2>
+        <p id="crash-log">Check your models folder. Are filenames case-sensitive?</p>
+    </div>
+
+    <!-- Contextual view navigation controls for touch-screen mobile devices -->
+    <div id="floating-toolbar">
+        <a href="../index.html" class="tool-btn" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">Main Menu</a>
+        <button class="tool-btn" data-panel="stats">Stats</button>
+        <button class="tool-btn" data-panel="scene">Scene</button>
+    </div>
+    <button id="ui-toggle-btn">HIDE UI</button>
+
+    <div id="left-container">
+        
+        <!-- Primary dashboard escape vector routing node -->
+        <a href="../index.html" class="panel-box mobile-hide" style="text-align: left; text-decoration: none; color: #fff; font-weight: bold; font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 2px; padding: 12px; cursor: pointer; border-left-color: #ff2a55;">
+            ← MAIN MENU
+        </a>
+
+        <!-- Runtime engine frame profile diagnostic monitoring sheet -->
+        <div id="panel-stats" class="panel-box">
+            <div id="stats-panel">
+                <strong>STATISTICS</strong><br>
+                FPS: <span id="fps" class="stat-val">0</span><br>
+                Total Tris: <span id="tris" class="stat-val">0</span><br>
+                Total Verts: <span id="verts" class="stat-val">0</span><br>
+                Total Size: <span id="fileSize" class="stat-val">Calculating...</span>
+            </div>
+        </div>
+
+        <!-- Endocrine system state-machine interactive control matrix -->
+        <div id="panel-sliders" class="panel-box">
+            <div id="stress-controls" class="panel-section active" style="position: relative;">
+                <div id="slider-wrapper">
+                    <div class="slider-group" style="margin-top: 0; position: relative;">
+                        <div class="slider-label" style="justify-content: center; color: #ff4d4d; letter-spacing: 1px; font-size: 11px; font-weight: 800;"><span>HPA AXIS ACTIVATION</span></div>
+                        <input type="range" id="stressSlider" class="stress-slider" min="0" max="1" step="0.001" value="0" style="position: relative; z-index: 2;">
+                        <div class="slider-ticks" style="position: absolute; bottom: 12px; width: 100%; height: 100%; pointer-events: none; z-index: 1;">
+                            <span style="position: absolute; left: 10%; bottom: 0; width: 2px; height: 6px; background: #ff4d4d;"></span>
+                            <span style="position: absolute; left: 30%; bottom: 0; width: 2px; height: 6px; background: #ff4d4d;"></span>
+                            <span style="position: absolute; left: 60%; bottom: 0; width: 2px; height: 6px; background: #ff4d4d;"></span>
+                            <span style="position: absolute; left: 80%; bottom: 0; width: 2px; height: 6px; background: #ff4d4d;"></span>
+                            <span style="position: absolute; left: 90%; bottom: 0; width: 2px; height: 6px; background: #ff4d4d;"></span>
+                            <span style="position: absolute; left: 100%; bottom: 0; width: 2px; height: 6px; background: #ff4d4d; transform: translateX(-2px);"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contextual text buffer overlay linked to active chronological state locks -->
+                <div id="annotation-container" style="display: none; width: 100%; background: rgba(10, 10, 15, 0.95); border: 1px solid rgba(255,77,77,0.5); border-radius: 8px; padding: 12px; box-sizing: border-box; backdrop-filter: blur(8px);">
+                    <h3 id="anno-title" style="margin-top: 0; font-size: 13px; color: #ff4d4d; letter-spacing: 1px;">Naslov</h3>
+                    <p id="anno-text" style="font-size: 11px; line-height: 1.4; color: #ddd; margin-bottom: 12px;">Tekst...</p>
+                    <button id="anno-unlock-btn" style="width: 100%; padding: 10px; font-size: 10px; font-weight: bold; background: rgba(255,77,77,0.3); border: 1px solid #ff4d4d; color: #fff; border-radius: 4px; text-transform: uppercase; letter-spacing: 1px; cursor: pointer;">Continue</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Render loop filter matrices and environment ambient lighting intensities -->
+        <div id="panel-scene" class="panel-box">
+            <div class="slider-group" style="margin-top: 0;">
+                <div class="slider-label">TONEMAPPING</div>
+                <select id="tonemapSelect">
+                    <option value="aces" selected>ACES (Cinematic)</option>
+                    <option value="standard">Standard (Filmic)</option>
+                    <option value="none">None (Linear)</option>
+                </select>
+            </div>
+            <div class="slider-group" style="margin-top: 10px;">
+                <div class="slider-label"><span>ENVIRONMENT IBL</span> <span id="iblVal" class="slider-val">1.0</span></div>
+                <input type="range" id="iblSlider" min="0" max="4" step="0.1" value="1.0">
+            </div>
+        </div>
+
+        <!-- Structural wireframe structural draw state hardware handler -->
+        <button id="wireframe-btn" style="margin-bottom: 20px;">TOGGLE TOPOLOGY</button>
+
+    </div> 
+
+    <!-- High-performance WebGL context coordinate draw surface -->
+    <canvas id="renderCanvas"></canvas>
+
+    <!-- Execution assets connecting custom behaviors to interface nodes -->
+    <script src="js/ui.js" defer></script>
+    <script src="js/app.js" defer></script>
+</body>
+</html>

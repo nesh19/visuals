@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical Artist Portfolio | nesh19</title>
+    <style>
+        body {
+            margin: 0; background: #050508; color: #fff; font-family: 'Segoe UI', sans-serif;
+            display: flex; flex-direction: column; align-items: center; min-height: 100vh;
+            padding: 40px 20px; box-sizing: border-box;
+        }
+        h1 {
+            font-size: 20px; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 40px;
+            color: #aaa; border-bottom: 2px solid #00d2ff; padding-bottom: 10px;
+        }
+        .portfolio-grid {
+            display: grid; 
+            grid-template-columns: repeat(2, minmax(350px, 350px));
+            justify-content: center;
+            gap: 30px; 
+            max-width: 800px; 
+            width: 100%;
+        }
+        
+        @media (max-width: 768px) {
+            .portfolio-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .card {
+            position: relative; height: 300px; background: rgba(10, 12, 16, 0.85);
+            border-left: 4px solid #00d2ff; border-radius: 8px; overflow: hidden;
+            box-sizing: border-box; transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-decoration: none; color: inherit; display: flex; flex-direction: column;
+        }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 30px rgba(0, 210, 255, 0.2); }
+        .card-img { width: 100%; height: 65%; object-fit: cover; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .card-title { padding: 15px 20px 5px 20px; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; font-weight: 800; color: #fff; }
+        .card-subtitle { padding: 0 20px; font-size: 11px; color: #00d2ff; text-transform: uppercase; letter-spacing: 1px; }
+        .card-overview {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(10, 12, 16, 0.95); backdrop-filter: blur(8px); padding: 30px;
+            box-sizing: border-box; opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .card:hover .card-overview { opacity: 1; pointer-events: auto; }
+        
+        /* 1. MOBILE / TOUCH */
+        .card.touch-active .card-overview { opacity: 1; pointer-events: auto; }
+
+        .card-overview h3 { color: #00d2ff; font-size: 14px; margin-top: 0; letter-spacing: 1px; text-transform: uppercase; }
+        .card-overview p { font-size: 11px; line-height: 1.4; color: #ccc; }
+        .coming-soon { opacity: 0.6; cursor: default; border-left-color: #555; }
+        .coming-soon:hover { transform: none; box-shadow: none; }
+        .badge {
+            position: absolute; top: 20px; right: 20px; background: rgba(255, 77, 77, 0.2);
+            border: 1px solid #ff4d4d; color: #ff4d4d; padding: 5px 10px; font-size: 10px;
+            letter-spacing: 1px; border-radius: 4px; text-transform: uppercase; font-weight: bold;
+        }
+        body, a, .card, .card:hover, .coming-soon {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='8' fill='none' stroke='%2300e5ff' stroke-width='1.5' opacity='0.7'/%3E%3Ccircle cx='12' cy='12' r='2' fill='%2300e5ff'/%3E%3C/svg%3E") 12 12, auto !important;
+        }
+        body:active, a:active, .card:active, .coming-soon:active {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='6' fill='none' stroke='%23ff2a55' stroke-width='2'/%3E%3Ccircle cx='12' cy='12' r='3' fill='%23ff2a55'/%3E%3C/svg%3E") 12 12, auto !important;
+}
+    </style>
+</head>
+<body>
+    <h1>Technical Artist Portfolio — Select Simulation</h1>
+    <div class="portfolio-grid">
+        <!-- 1. CORTISOL -->
+        <a href="cortisol/index.html" target="_self" class="card">
+            <img src="cortisol/assets/preview_cortisol.webp" alt="Cortisol Response" class="card-img">
+            <div class="card-title">The Stress Cascade</div>
+            <div class="card-subtitle">HPA Axis Simulation</div>
+            <div class="card-overview">
+                <h3>Project Overview</h3>
+                <p><strong>Concept:</strong> Interactive simulation of the HPA axis biological cascade.<br><br><strong>Tech Solutions:</strong> Engineered in Babylon.js utilizing dynamic PBR material overrides, procedural emission masking, and a deterministic timeline state-machine.</p>
+            </div>
+        </a>
+        <!-- 2. CRANIOFACIAL -->
+        <a href="craniofacial/index.html" target="_self" class="card">
+            <img src="craniofacial/assets/preview_face.webp" alt="Craniofacial Reshaping" class="card-img">
+            <div class="card-title">Craniofacial Reshaping</div>
+            <div class="card-subtitle"> Interactive Aesthetic Preview</div>
+            <div class="card-overview">
+                <h3>Project Overview</h3>
+                <p><strong>Concept:</strong> Real-time maxillofacial morphological surgery outcomes.<br><br><strong>Tech Solutions:</strong> Powered by the Babylon.js MorphTargetManager optimized for real-time, slider-driven parametric vertex deformation.</p>
+            </div>
+        </a>
+        <!-- 3. WIND TUNNEL -->
+        <a href="windtunnel/index.html" target="_self" class="card">
+            <img src="windtunnel/assets/preview_drone.webp" alt="Wind Tunnel" class="card-img">
+            <div class="card-title">Aero Wind Tunnel</div>
+            <div class="card-subtitle">Aerodynamic CFD Simulation</div>
+            <div class="card-overview">
+                <h3>Project Overview</h3>
+                <p><strong>Concept:</strong> Real-time aerodynamic wind flow vector simulation over a drone chassis.<br><br><strong>Tech Solutions:</strong> Implemented custom GLSL particle shaders driven by high-precision fluid velocity vector maps baked directly from Blender physics.</p>
+            </div>
+        </a>
+                <!-- 4. FUTURE RESEARCH & DEVELOPMENT PIPELINE -->
+                <a href="#" class="card coming-soon" style="cursor: default;">
+                    <div class="badge">Coming Soon</div>
+                    
+                     <!-- Normalized low-fidelity asset fallback with desaturation matrix -->
+                    <img src="coming_soon\assets\preview_soon.webp" alt="Future Project" class="card-img" style="filter: grayscale(1) brightness(0.6);">
+                    
+                    <div class="card-title" style="color: #777;">Next-Gen Project</div>
+                    <div class="card-subtitle" style="color: #555;">In Development</div>
+
+                    <!-- Contextual overlay containing theoretical implementation parameters -->
+                    <div class="card-overview">
+                        <h3 style="color: #555;">Project Overview</h3>
+                        <p><strong>Concept:</strong> Real-time molecular-level cellular intrusion and viral replication mechanics.<br><br><strong>Tech Solutions:</strong> Spearheading a next-gen WebGPU compute shader pipeline for dynamic soft-body membrane deformation and automated bio-instrument pathfinding.</p>
+                    </div>
+                </a>
+    
+    <!-- MOBILE VISUAL ACCESSIBILITY LAYER -->
+    <script>
+        // Evaluate hardware capabilities to normalize touch interface lifecycles
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        if (isTouchDevice) {
+            const cards = document.querySelectorAll('.card');
+            cards.forEach(card => {
+                card.addEventListener('click', function(e) {
+                    // Check for passive touch state constraint
+                    if (!this.classList.contains('touch-active')) {
+                        e.preventDefault(); // Intercept default routing vector to reveal contextual text node first
+                        cards.forEach(c => c.classList.remove('touch-active'));
+                        this.classList.add('touch-active');
+                    }
+                    // Consecutive pointer interaction executes deep linking to the active simulation engine
+                });
+            });
+
+            // Universal escape layout register to reset current active state flags
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.card')) {
+                    cards.forEach(c => c.classList.remove('touch-active'));
+                }
+            });
+        }
+    </script>
+</body>
+</html>
