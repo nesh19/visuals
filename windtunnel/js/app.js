@@ -8,9 +8,11 @@ const engine = new BABYLON.Engine(canvas, true);
 let currentScene = null;
 let isWireframe = false;
 
+const isMobileDevice = window.innerWidth < 768;
+
 const CONFIG = {
-    particleCount: 60000,              
-    particleSize: 0.2,                 
+    particleCount: isMobileDevice ? 10000 : 40000,         
+    particleSize: 0.1,                 
     beamRadius: 1.75,                 
     tunnelLength: 12.0,
     baseSpeed: 2.0,
@@ -523,11 +525,21 @@ const createScene = async function () {
         
         // Sample the hardware pixel density directly to normalize appearance across Android and iOS
         let hardwareDpr = window.devicePixelRatio || 2.0;
-        let responsiveScale = isMobileOrTablet ? (1.0 / hardwareDpr) * 0.9 : 1.0;
-        
+        let responsiveScale;
+
+        if (window.innerWidth < 768) {
+            // Mobile
+            responsiveScale = (1.0 / hardwareDpr) * 0.5;
+        } else if (window.innerWidth >= 768 && window.innerWidth < 1200) {
+            // Tablets
+            responsiveScale = (1.0 / hardwareDpr) * 1.8; 
+        } else {
+            // Desktop
+            responsiveScale = 1.0;
+        }
+
         let dynamicSize = (0.4 + (currentMix * 0.8)) * responsiveScale; 
         shaderMaterial.setFloat("particleSize", dynamicSize);
-        shaderMaterial.pointSize = dynamicSize;  
         
         // Attenuate transparency scales inside the alpha compositing pipeline as velocity increases
         let dynamicAlpha = 0.15 + (currentMix * 0.30);
