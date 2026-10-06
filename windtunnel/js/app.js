@@ -11,22 +11,22 @@ let isWireframe = false;
 const isMobileDevice = window.innerWidth < 768;
 
 const CONFIG = {
-    particleCount: isMobileDevice ? 10000 : 40000,         
+    particleCount: isMobileDevice ? 8000 : 60000,         
     particleSize: 0.1,                 
-    beamRadius: 1.75,                 
-    tunnelLength: 12.0,
-    baseSpeed: 2.0,
-    turboSpeed: 10.0,
+    beamRadius: 3.5,                 
+    tunnelLength: 8.0,
+    baseSpeed: 12.0,
+    turboSpeed: 50.0,
     zOffset: -0.6,
     minBaseAlpha: 0.5,
     flowDirection: 1
-                 
 };
 
 let currentMix = 0.0;
 const fanGroups = [];
 const brakeGroups = [];
 const invMat = new BABYLON.Matrix(); 
+let particlePhase = 0; // FIKS: Akumulator za tečnu brzinu partikala (sprečava skokove)
 
 // ============================================================================
 // ENVIRONMENT OVERRIDES & RENDER CONFIGURATION REGISTER
@@ -36,42 +36,88 @@ const wireframeBtn = document.getElementById("wireframe-btn");
 if (wireframeBtn) {
     wireframeBtn.onclick = () => {
         isWireframe = !isWireframe;
+        
         wireframeBtn.style.color = isWireframe ? "#ffffff" : "#aaa";
         wireframeBtn.style.borderColor = isWireframe ? "#ffffff" : "rgba(255,255,255,0.1)";
-        if(currentScene) {
+
+        if (currentScene) {
             currentScene.materials.forEach(mat => { 
-                if (mat && mat.name !== "gpuMat") mat.wireframe = isWireframe; 
+                // Ignorišemo gpuMat (partikli) i inkMat (pozadina)
+                if (mat && mat.name !== "gpuMat" && mat.name !== "inkMat") {
+                    mat.wireframe = isWireframe; 
+                }
             });
         }
     };
 }
 
-const tonemapSelect = document.getElementById("tonemapSelect");
-if (tonemapSelect) {
-    tonemapSelect.onchange = (e) => {
-        if(!currentScene) return;
-        // Map hardware LUT parameters to dynamic image processing buffers
-        if (e.target.value === "aces") {
-            currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
-            currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-        } else if (e.target.value === "standard") {
-            currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
-            currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
-        } else {
-            currentScene.imageProcessingConfiguration.toneMappingEnabled = false;
-        }
-    };
-}
+    // ============================================================================
+    // INK BACKGROUND SHADER (Gusto mastilo sa landing page-a, bez interakcije miša)
+    // ============================================================================
+    BABYLON.Effect.ShadersStore["inkVertexShader"] = `
+        precision highp float;
+        attribute vec3 position;
+        attribute vec2 uv;
+        uniform mat4 worldViewProjection;
+        varying vec2 vUv;
 
-const iblSlider = document.getElementById("iblSlider");
-if (iblSlider) {
-    iblSlider.oninput = (e) => {
-        const val = parseFloat(e.target.value);
-        const iblValElem = document.getElementById("iblVal");
-        if (iblValElem) iblValElem.innerText = val.toFixed(1);
-        if(currentScene) currentScene.environmentIntensity = val;
-    };
-}
+        void main() {
+            gl_Position = worldViewProjection * vec4(position, 1.0);
+            vUv = uv;
+        }
+    `;
+
+    BABYLON.Effect.ShadersStore["inkFragmentShader"] = `
+        precision highp float;
+        varying vec2 vUv;
+        uniform float time;
+        
+        // Funkcije direktno preuzete iz tvog inkShader.js
+        float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+
+        float noise(vec2 p) {
+            vec2 i = floor(p); vec2 f = fract(p);
+            f = f * f * (3.0 - 2.0 * f);
+            float a = hash(i); float b = hash(i + vec2(1.0, 0.0));
+            float c = hash(i + vec2(0.0, 1.0)); float d = hash(i + vec2(1.0, 1.0));
+            return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+        }
+
+        float fbm(vec2 p) {
+            float f = 0.0; float amp = 0.5;
+            for(int i = 0; i < 2; i++) {
+                f += amp * noise(p); p *= 2.0; amp *= 0.5;
+            }
+            return f;
+        }
+
+        void main() {
+            vec2 p = vUv * 2.0 - 1.0;
+            vec2 scaledP = p * 3.0; 
+            
+            vec2 flowP = scaledP + vec2(time * 0.2, time * 0.2);
+            
+            vec2 q = vec2(0.0);
+            q.x = fbm(flowP + 0.05 * time);
+            q.y = fbm(flowP + vec2(1.0) + 0.05 * time);
+
+            vec2 r = vec2(0.0);
+            r.x = fbm(flowP + 2.0 * q + vec2(1.7, 9.2) + 0.1 * time);
+            r.y = fbm(flowP + 2.0 * q + vec2(8.3, 2.8) + 0.1 * time);
+
+            float f = fbm(flowP + r);
+            
+            // Zadržan visoki kontrast i duboka plava boja
+            float fluidContrast = smoothstep(0.4, 0.9, f);
+            vec3 color = mix(
+                vec3(0.001, 0.001, 0.003), 
+                vec3(0.01, 0.06, 0.2),     
+                fluidContrast
+            );
+
+            gl_FragColor = vec4(color, 1.0);
+        }
+    `;
 
 const createScene = async function () {
     const loadingScreen = document.getElementById('loading-screen');
@@ -83,7 +129,6 @@ const createScene = async function () {
     scene.fogColor = new BABYLON.Color3(0.01, 0.01, 0.01);
     scene.fogDensity = 0.0001; 
 
-    // Ingest production asset meta headers to verify payload footprint boundaries
     fetch("./assets/dron.glb", { method: 'HEAD' })
         .then(response => {
             const bytes = response.headers.get("content-length");
@@ -94,13 +139,11 @@ const createScene = async function () {
             }
         }).catch(() => {});
 
-    // Set cinematic look-development parameters via dynamic pipeline grading
     scene.imageProcessingConfiguration.toneMappingEnabled = true;
     scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
     scene.imageProcessingConfiguration.exposure = 1.0;
     scene.imageProcessingConfiguration.contrast = 2.00;
 
-    // Load pre-filtered radiance maps to drive PBR environmental reflections
     scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/studio.env", scene);
     scene.environmentIntensity = 1.2;
 
@@ -108,22 +151,19 @@ const createScene = async function () {
     glowLayer.intensity = 0.75; 
 
     // ============================================================================
-    // LUMINANCE ARCHITECTURE & SHADOW INFERENCE PIPELINE
+    // LUMINANCE ARCHITECTURE
     // ============================================================================
 
-    // Low-intensity hemispheric fill to establish structural ambient depth
     const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
     hemi.intensity = 0.15;
     hemi.diffuse = new BABYLON.Color3(0.1, 0.1, 0.15); 
 
-    // Primary directional rim light configuration targeting the prototype boundaries
     const rimLight = new BABYLON.DirectionalLight("rimLight", new BABYLON.Vector3(0.45, -0.8, -0.2), scene);
     rimLight.position = new BABYLON.Vector3(0.0, 5.0, -8.0); 
     rimLight.diffuse = new BABYLON.Color3(1.0, 1.0, 1.5); 
     rimLight.specular = new BABYLON.Color3(1.0, 0.4, 0.4); 
-    rimLight.intensity = 0.55; 
+    rimLight.intensity = 1.05; 
 
-    // Instantiate high-resolution shadow maps utilizing Percentage Closer Filtering (PCF)
     const shadowGenerator = new BABYLON.ShadowGenerator(2048, rimLight);
     shadowGenerator.usePercentageCloserFiltering = true;
     shadowGenerator.setDarkness(0.5);
@@ -131,100 +171,89 @@ const createScene = async function () {
     const isMobilePortrait = window.innerWidth < window.innerHeight;
     
     // ============================================================================
-    // TRANSFORMATION HIERARCHY & VIEWPORT MATRIX NORMALIZATION
+    // TRANSFORMATION HIERARCHY & CAMERA 
     // ============================================================================
     scene.collisionsEnabled = true;
 
-    const cameraTarget = new BABYLON.Vector3(0, 0, 0); 
-    let initialRadius = 11.0;
-
-    const initialAlpha = 1.57; 
+    const cameraTarget = new BABYLON.Vector3(0, -0.3, -1); 
+    let initialRadius = 6.2;
+    const initialAlpha = 0; 
     let initialBeta = 1.25;  
 
-    // Apply specific spatial coordinate translation vectors for mobile display frames
     if (isMobilePortrait) {
-        cameraTarget.y = 0.3; 
-        cameraTarget.x = 0.6; 
-        initialRadius = 13.0; 
-        initialBeta = Math.PI / 2; // Establish perfectly flat horizon pitch angle for mobile viewports
+        cameraTarget.y = -1.5; 
+        cameraTarget.z = -1.15; // 1. CENTRIRANJE: Postavljeno na 0 kako bi dron bio tačno na sredini
+        initialRadius = 11.5; // 2. ODZUMIRAVANJE: Povećana udaljenost kamere da krila stanu u kadar
+        initialBeta = 1.05; // 3. PTIČJA PERSPEKTIVA: Smanjeno sa Math.PI / 2 (ravno) na 1.05 (blago odozgo)
     }
     
     const camera = new BABYLON.ArcRotateCamera("cam", initialAlpha, initialBeta, initialRadius, cameraTarget, scene);
     camera.attachControl(canvas, true);
-    camera.minZ = 0.01; // Restrict transformation boundaries to eliminate clipping nearplane artifacts
+    camera.minZ = 0.01; 
 
-    camera.checkCollisions = true;
-    camera.collisionRadius = new BABYLON.Vector3(0.5, 0.5, 0.5);
-    
-    // Enforce strict projection matrix frustum constraints depending on device metadata
+    if (!isMobilePortrait) {
+        camera.targetScreenOffset = new BABYLON.Vector2(0.55, 0);
+    }
+
     if (isMobilePortrait) {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_VERTICAL_FIXED;
-        camera.fov = 0.75; 
+        camera.fov = 0.85; // Malo povećan FOV kako bi se proširio vidni ugao na uskim ekranima
     } else {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_HORIZONTAL_FIXED;
         camera.fov = 1.15;  
     }
 
-    // ============================================================================
-    // DETERMINISTIC CAMERA TRANSFORMATION LIMITS
-    // ============================================================================
-    const isMobileOrTablet = window.innerWidth < 1200; 
+    camera.lowerBetaLimit = 0.1; 
+    camera.upperBetaLimit = Math.PI - 0.1; 
+    camera.lowerAlphaLimit = null; 
+    camera.upperAlphaLimit = null; 
 
-    // Initialize viewport-specific spherical coordinate constraints to prevent boundary clipping
-    if (isMobileOrTablet) {
-        // Enforce strict pitch thresholds to block the viewport from tilting into the ceiling matrix
-        camera.lowerBetaLimit = 80 * (Math.PI / 180); 
-        camera.upperBetaLimit = 85 * (Math.PI / 180); 
-
-        const alphaRangeMobile = 1.30; 
-        camera.lowerAlphaLimit = initialAlpha - alphaRangeMobile; 
-        camera.upperAlphaLimit = initialAlpha + alphaRangeMobile;
-    } else {
-        camera.lowerBetaLimit = 30 * (Math.PI / 180); 
-        camera.upperBetaLimit = 100 * (Math.PI / 180); 
-
-        const alphaRangeDesktop = 0.785; 
-        camera.lowerAlphaLimit = initialAlpha - alphaRangeDesktop; 
-        camera.upperAlphaLimit = initialAlpha + alphaRangeDesktop;
-    }
-
-    // Disable input-bound inertial transforms to maintain camera tracking stability
     camera.panningSensibility = 0; 
     camera.inertialPanningX = 0;
     camera.inertialPanningY = 0;
     camera.wheelPrecision = 60;
+    
+    camera.lowerRadiusLimit = 3.0;
+    // OSLOBOĐEN LIMIT: Kamera na desktopu može do 6.0, ali na mobilnom je puštamo do 12.0 da bi odzumiranje radilo
+    camera.upperRadiusLimit = isMobilePortrait ? 12.0 : 6.0; 
 
-    camera.upperRadiusLimit = camera.radius;
-
-    // Attach dynamic fill light proxy to the active camera transformation hierarchy
     const camLight = new BABYLON.PointLight("camLight", camera.position, scene);
     camLight.parent = camera;
     camLight.intensity = 0.6; 
     camLight.diffuse = new BABYLON.Color3(0.9, 0.95, 1.0);
 
-    // Ingest primary scene graph payload asynchronously via loaders instance
+    // ============================================================================
+    // INK PLANE KREIRANJE
+    // ============================================================================
+    const inkPlane = BABYLON.MeshBuilder.CreatePlane("inkPlane", { size: 150 }, scene);
+    inkPlane.parent = camera; 
+    inkPlane.position.z = 40; 
+    inkPlane.renderingGroupId = 0; 
+    inkPlane.isPickable = false; 
+    
+    const inkMat = new BABYLON.ShaderMaterial("inkMat", scene, {
+        vertex: "ink",
+        fragment: "ink",
+    }, {
+        attributes: ["position", "uv"],
+        uniforms: ["worldViewProjection", "time", "mixLevel"]
+    });
+    inkMat.backFaceCulling = false;
+    inkMat.disableLighting = true;
+    inkMat.depthFunction = BABYLON.Engine.ALWAYS;
+    inkPlane.material = inkMat;
+
+    // ============================================================================
+    // DRONE 
+    // ============================================================================
     const result = await BABYLON.SceneLoader.ImportMeshAsync("", "./assets/", "dron.glb", scene);
     if (loadingScreen) loadingScreen.style.display = 'none';
-    let wallsMesh = scene.getMeshByName("walls") || scene.getMeshByName("Walls");
-    let sidesMesh = scene.getMeshByName("sides") || scene.getMeshByName("Sides");
-    if (wallsMesh) wallsMesh.checkCollisions = true;
-    wallsMesh.receiveShadows = true;
-    if (sidesMesh) sidesMesh.checkCollisions = true;
-
+    
     let Fuselage = scene.getMeshByName("Fuselage") || scene.getMeshByName("fuselage") || result.meshes[0];
     if (Fuselage) {
         shadowGenerator.addShadowCaster(Fuselage, true); 
     }
 
-    // Isolate structural meshes to omit static background occlusion from the dynamic shadow maps
-    if (wallsMesh) {
-        shadowGenerator.removeShadowCaster(wallsMesh, true);
-    }
-    if (sidesMesh) {
-        shadowGenerator.removeShadowCaster(sidesMesh, true);
-    }
-
-    // Traverse structural sub-meshes to inherit environment pre-filtered data maps
     Fuselage.getChildMeshes().forEach(child => {
         child.lightSources = scene.lights;
         if (child.material) {
@@ -234,7 +263,6 @@ const createScene = async function () {
          child.renderingGroupId = 1; 
     });
 
-    // Compute scene index bounds to generate precise diagnostic performance summaries
     let trisSum = 0;
     let vertsSum = 0;
     result.meshes.forEach(m => {
@@ -244,7 +272,6 @@ const createScene = async function () {
         }
     });
     
-    // Parse internal skeletal/transform tracks into active and conditional playback registers
     const trisElem = document.getElementById("tris");
     const vertsElem = document.getElementById("verts");
     if(trisElem) trisElem.innerText = Math.floor(trisSum).toLocaleString();
@@ -252,6 +279,7 @@ const createScene = async function () {
 
     scene.animationGroups.forEach(group => {
         const name = group.name.toLowerCase();
+        
         if (name.includes("fan")) {
             group.play(true); 
             fanGroups.push(group);
@@ -265,15 +293,14 @@ const createScene = async function () {
             group.play(true);
         }
     });
-
+    
     // ============================================================================
-    // PROCEDURAL GPU BUFFER ALLOCATION FOR REAL-TIME STREAMING PARTICLES
+    // PROCEDURAL GPU BUFFER ALLOCATION
     // ============================================================================
     const positions = new Float32Array(CONFIG.particleCount * 3);
     const randomOffsets = new Float32Array(CONFIG.particleCount * 3);
     const particleIds = new Float32Array(CONFIG.particleCount);
 
-    // Populate planar mathematical arrays with pseudo-random vector paths
     for (let i = 0; i < CONFIG.particleCount; i++) {
         positions[i * 3] = (Math.random() - 0.5) * CONFIG.tunnelLength;
         let r = Math.sqrt(Math.random()) * CONFIG.beamRadius;
@@ -287,7 +314,6 @@ const createScene = async function () {
         particleIds[i] = i / CONFIG.particleCount;
     }
 
-    // Construct custom VBO (Vertex Buffer Object) target inside the active WebGL rendering target
     const customMesh = new BABYLON.Mesh("gpuParticles", scene);
     const vertexData = new BABYLON.VertexData();
     const indices = new Int32Array(CONFIG.particleCount);
@@ -296,12 +322,11 @@ const createScene = async function () {
     vertexData.positions = positions;
     vertexData.indices = indices;
     vertexData.applyToMesh(customMesh);
-    // Bind unique shader input registers to pass parameters directly into custom hardware shaders
     customMesh.setVerticesData("randomOffset", randomOffsets, false, 3);
     customMesh.setVerticesData("particleId", particleIds, false, 1);
 
-    // ============================================================================
-    // HIGH-PERFORMANCE CUSTOM GLSL VERTEX & FRAGMENT SHADER REGISTERS
+// ============================================================================
+    // HIGH-PERFORMANCE CUSTOM GLSL VERTEX SHADER (Fiks za nestajanje partikala)
     // ============================================================================
     
     BABYLON.Effect.ShadersStore["gpuParticleVertexShader"] = `
@@ -310,23 +335,19 @@ const createScene = async function () {
         attribute vec3 randomOffset;
         attribute float particleId;
 
-        // Dynamic transformation registers mapping the active model boundaries
         uniform mat4 worldViewProjection;  
         uniform mat4 fuselageWorld;   
         uniform mat4 invMatrix;       
         
         uniform vec3 fusPos;
-        uniform float uTime;
+        uniform float uPhase; 
         uniform float uSlider;
         uniform float tunnelLength;
         uniform float beamRadius;
-        uniform float realSpeed;
         uniform float particleSize;
         uniform float minBaseAlpha;
-        uniform float flowDirection;
         uniform float zOffset;
 
-        // Hardware texture samplers driving the fluid velocity vector arrays
         uniform sampler2D flowClosed;
         uniform sampler2D flowOpen;
 
@@ -334,22 +355,17 @@ const createScene = async function () {
 
         void main() {
             vec3 localPos = position;
-
-            // Apply global transformation offsets to the incoming vertex stream
             localPos.z += zOffset; 
             localPos.y += -0.20; 
-
             float limit = tunnelLength * 0.5; 
             
-            // Map deterministic, continuous lifecycle loops leveraging pseudo-random attributes
-            float life = fract((uTime * realSpeed * flowDirection * 0.05) + randomOffset.x);
+            float life = fract(uPhase + randomOffset.x);
             localPos.x = mix(9.0, -9.5, life); 
 
             float dx = localPos.x;
             float dy = localPos.y;
             float dz = localPos.z - zOffset;
 
-            // Evaluate mathematical ellipse intersection boundaries for proxy collision volumes
             float rx = 2.0; 
             float ry = 0.35; 
             float rz = 2.2; 
@@ -367,18 +383,13 @@ const createScene = async function () {
             dy = localPos.y;
             dz = localPos.z - zOffset;
 
-            // Map standard normalized UV data channels for bi-linear texture array lookups
             vec2 uvCoords = vec2((dx / tunnelLength) + 0.5, (dz / 4.0) + 0.5);
             uvCoords.y = 1.0 - uvCoords.y; 
 
             if(uvCoords.x >= 0.0 && uvCoords.x <= 1.0 && uvCoords.y >= 0.0 && uvCoords.y <= 1.0) {
-                vec3 dataClosed = texture(flowClosed, uvCoords).rgb;
-                vec3 dataOpen = texture(flowOpen, uvCoords).rgb;
+                vec3 forceClosed = texture(flowClosed, uvCoords).rgb;
+                vec3 forceOpen = texture(flowOpen, uvCoords).rgb;
                 
-                vec3 forceClosed = dataClosed;
-                vec3 forceOpen = dataOpen;
-                
-                // Execute linear interpolation (LERP) across vector arrays via user dashboard interface
                 float smoothBlend = smoothstep(0.3, 0.7, uSlider);
                 vec3 finalForce = mix(forceClosed, forceOpen, smoothBlend);
                 float turbulenceStrength = 1.0 + (uSlider * 4.0);
@@ -388,14 +399,12 @@ const createScene = async function () {
                 localPos.x += finalForce.x * 0.05 * turbulenceStrength * life;
             }
 
-            // Transform local particle coordinates into unified world space matrix
             vec4 worldPos = fuselageWorld * vec4(localPos, 1.0);
 
             float dist = abs(worldPos.x - fusPos.x) / limit;
             float alpha = 1.0;
             if (dist > 0.8) alpha = (1.0 - dist) * 5.0;
             
-            // Generate deterministic opacity attenuation ramps across lifecycle keyframes
             if (life < 0.15) {
                 float rightFade = life / 0.15;
                 alpha *= clamp(rightFade, 0.0, 1.0);
@@ -405,7 +414,6 @@ const createScene = async function () {
                 alpha *= clamp(leftFade, 0.0, 1.0);
             }
 
-            // Enforce radial falloff limits to eliminate geometry intersection clipping artifacts
             float radialDist = distance(worldPos.yz, fusPos.yz - vec2(0.0, -0.1));
             float fadeEdge = beamRadius * 1.2;
             if (radialDist > fadeEdge) {
@@ -413,18 +421,19 @@ const createScene = async function () {
                 alpha *= clamp(radialFade, 0.0, 1.0);
             }
             
-            // Attenuate dynamic opacity curves depending on input velocity coefficients
             float speedFade = mix(0.4, 0.18, uSlider); 
             float baseAlpha = clamp(alpha * speedFade, minBaseAlpha * (1.0 - uSlider * 0.4), 0.9); 
 
-            // Initialize chromatic PBR color profiles (Neon Blue vs Dynamic Hit Red)
+            // Sitna, ukusna randomizacija
+            float randSizeMultiplier = mix(0.7, 1.1, randomOffset.y);
+            baseAlpha *= mix(0.4, 1.0, randomOffset.z);
+
             vec3 neonBlue = vec3(0.0, 0.5, 2.0); 
-            vec3 hitRed = vec3(6.5, 0.1, 0.3);
+            vec3 hitRed = vec3(14.0, 0.3, 0.15);
             vec3 finalColor = neonBlue; 
 
             float speedThreshold = smoothstep(0.3, 0.6, uSlider);
 
-            // Calculate active aerodynamic pressure variance thresholds to drive procedural color shift
             if (ellipVal < 3.0 || (abs(dy) < 0.4 && abs(dz) < 0.6 && dx < 0.0)) {
                 float pressure = clamp(speedThreshold * (1.0 - (ellipVal / 3.0)), 0.0, 1.0);
                 finalColor = mix(neonBlue, hitRed, pressure);
@@ -432,18 +441,24 @@ const createScene = async function () {
                 float proximityFactor = smoothstep(3.0, 0.4, ellipVal) * speedThreshold;
                 if (dx < 0.0) proximityFactor = max(proximityFactor, speedThreshold * 0.8);
                 finalColor = mix(finalColor, hitRed, proximityFactor);
+                
+                baseAlpha = mix(baseAlpha, 1.0, pressure);
+                // Vrlo malo uveličanje (maksimum 20%) pri dodiru
+                randSizeMultiplier *= (1.0 + pressure * 0.2); 
             }
 
             if (isHittingPlane > 0.5) {
-                finalColor = mix(neonBlue, vec3(6.0, 0.2, 0.4), speedThreshold); 
+                finalColor = mix(neonBlue, vec3(12.0, 0.1, 0.3), speedThreshold); 
+                baseAlpha = 1.0;
+                randSizeMultiplier *= 1.2; 
             }
             
-            // Pass values to fragment processing registers and compute dynamic screen projection
             vColor = vec4(finalColor, baseAlpha);
             gl_Position = worldViewProjection * worldPos;
             
-            // Scale point sizes inversely against lifecycle square roots to optimize fill-rate budgets
-            gl_PointSize = particleSize * (1.0 - (life * life));
+            // FIKS: Zaštita koja sprečava render engine da ugasi partikle manje od 1 piksela
+            float finalSize = particleSize * randSizeMultiplier * (1.0 - (life * life));
+            gl_PointSize = max(finalSize, 1.0);
         }
     `;
 
@@ -455,17 +470,15 @@ const createScene = async function () {
         }
     `;
 
-    // Instantiate custom shader compilation wrapper driven by uniform variables register
     const shaderMaterial = new BABYLON.ShaderMaterial("gpuMat", scene, {
         vertex: "gpuParticle",
         fragment: "gpuParticle",
     }, {
         attributes: ["position", "randomOffset", "particleId"],
-        uniforms: ["worldViewProjection", "fuselageWorld", "invMatrix", "fusPos", "uTime", "uSlider", "tunnelLength", "beamRadius", "realSpeed", "particleSize", "minBaseAlpha", "flowDirection", "zOffset"],
+        uniforms: ["worldViewProjection", "fuselageWorld", "invMatrix", "fusPos", "uPhase", "uSlider", "tunnelLength", "beamRadius", "particleSize", "minBaseAlpha", "zOffset"],
         samplers: ["flowClosed", "flowOpen"]
     });
 
-    // Ingest data textures using strict NEAREST sampling filters to maintain vector data layout integrity
     const textureClosed = new BABYLON.Texture("./assets/flow_closed.png", scene, 
         false, 
         false, 
@@ -478,34 +491,30 @@ const createScene = async function () {
         BABYLON.Constants.TEXTURE_NEAREST_SAMPLINGMODE
     );
 
-
-    // Enforce linear mathematical color space by disabling gamma space normalization
-    // This preserves raw fluid vector telemetry layout data and limits engine lighting bias
     textureClosed.gammaSpace = false;
     textureOpen.gammaSpace = false;
 
-    // Bind non-interpolated data fields directly to the global fragment uniform stack
     shaderMaterial.setTexture("flowClosed", textureClosed);
     shaderMaterial.setTexture("flowOpen", textureOpen);
     
     shaderMaterial.pointsCloud = true;
     shaderMaterial.pointSize = CONFIG.particleSize;
-    shaderMaterial.alphaMode = BABYLON.Engine.ALPHA_COMBINE;
+    shaderMaterial.alphaMode = BABYLON.Engine.ALPHA_ADD; // FIKS: Additive blend pojačava sjaj sudara!
     shaderMaterial.backFaceCulling = false;
-    shaderMaterial.disableDepthWrite = false;
+    shaderMaterial.disableDepthWrite = true; // Sprečava Z-fighting kod gustih sudara
     customMesh.renderingGroupId = 1;
     customMesh.material = shaderMaterial;
     
     let startTime = performance.now();
     const fpsText = document.getElementById("fps"); 
 
-    // Initialize execution loop callback prior to rendering the active viewport matrix
     scene.registerBeforeRender(() => {
         let elapsedTime = (performance.now() - startTime) / 1000;
+        let dt = engine.getDeltaTime() / 1000.0;
+        
         camLight.position.copyFrom(camera.position);
         
         if (Fuselage) {
-            // Compute real-time transform boundaries and execute analytical matrix inversions
             Fuselage.computeWorldMatrix(true);
             Fuselage.getWorldMatrix().invertToRef(invMat);
             
@@ -514,47 +523,47 @@ const createScene = async function () {
             shaderMaterial.setVector3("fusPos", Fuselage.getAbsolutePosition());
         }
         
-        // Synchronize environment vectors and time coefficients with the dynamic vertex shader
+        // FIKS: Akumuliranje faze (Phase) umesto množenja apsolutnog vremena
+        let currentRealSpeed = CONFIG.baseSpeed + (currentMix * (CONFIG.turboSpeed - CONFIG.baseSpeed));
+        particlePhase += dt * currentRealSpeed * CONFIG.flowDirection * 0.05;
+        
         shaderMaterial.setMatrix("worldViewProjection", scene.getTransformMatrix());
-        shaderMaterial.setFloat("uTime", elapsedTime);
+        shaderMaterial.setFloat("uPhase", particlePhase);
         shaderMaterial.setFloat("uSlider", currentMix);
         
+        // Ažuriranje Ink Pozadine
+        if (inkMat) {
+            inkMat.setFloat("time", elapsedTime);
+            inkMat.setFloat("mixLevel", currentMix);
+        }
+
         shaderMaterial.setFloat("tunnelLength", CONFIG.tunnelLength);
         shaderMaterial.setFloat("beamRadius", CONFIG.beamRadius);
-        shaderMaterial.setFloat("realSpeed", CONFIG.baseSpeed + (currentMix * (CONFIG.turboSpeed - CONFIG.baseSpeed)));
         
-        // Sample the hardware pixel density directly to normalize appearance across Android and iOS
         let hardwareDpr = window.devicePixelRatio || 2.0;
         let responsiveScale;
 
         if (window.innerWidth < 768) {
-            // Mobile
-            responsiveScale = (1.0 / hardwareDpr) * 0.5;
+            responsiveScale = (1.0 / hardwareDpr) * 0.7; // Malo krupnije na telefonu
         } else if (window.innerWidth >= 768 && window.innerWidth < 1200) {
-            // Tablets
             responsiveScale = (1.0 / hardwareDpr) * 1.8; 
         } else {
-            // Desktop
             responsiveScale = 1.0;
         }
 
         let dynamicSize = (0.4 + (currentMix * 0.8)) * responsiveScale; 
         shaderMaterial.setFloat("particleSize", dynamicSize);
         
-        // Attenuate transparency scales inside the alpha compositing pipeline as velocity increases
         let dynamicAlpha = 0.15 + (currentMix * 0.30);
         shaderMaterial.setFloat("minBaseAlpha", dynamicAlpha);
         
-        // Apply spatial boundary translations along the localized Z-axis to simulate wake vortices
-        let dynamicZOffset = CONFIG.zOffset - (currentMix * 0.5); 
         shaderMaterial.setFloat("zOffset", -0.6);
-        shaderMaterial.setFloat("flowDirection", CONFIG.flowDirection);
         
         if (fpsText) fpsText.innerText = engine.getFps().toFixed(0);
     });
 
     // ============================================================================
-    // DOM HARDWARE INPUT CONTROL MONITOR & REAL-TIME TELEMETRY CALCULATOR
+    // DOM HARDWARE INPUT CONTROL & SLIDER 
     // ============================================================================
     const slider = document.getElementById("brakeSlider");
     const windSpeedText = document.getElementById("wind-speed-text");
@@ -563,43 +572,41 @@ const createScene = async function () {
     const vortexText = document.getElementById("vortex-text");
     
     if(slider) {
-        slider.oninput = function() {
+        slider.addEventListener("input", function() {
             currentMix = parseFloat(this.value);
             let currentWindSpeed = 1 + (currentMix * 999);
             
-            // Render physical aerospace attributes directly into responsive UI containers
-            windSpeedText.innerText = `${currentWindSpeed.toFixed(1)} m/s`;
-            reynoldsText.innerText = `${(currentWindSpeed * 75000).toExponential(2).toUpperCase()}`;
+            if (windSpeedText) windSpeedText.innerText = `${currentWindSpeed.toFixed(1)} M/S`;
+            if (reynoldsText) reynoldsText.innerText = `${(currentWindSpeed * 75000).toExponential(2).toUpperCase()}`;
             
-            // Map state changes across distinct boundary thresholds for aerodynamic evaluation
             if (currentMix < 0.1) {
-                flowStatusText.innerHTML = "<span>FLOW REGIME: LAMINAR</span>";
-                flowStatusText.className = "stat active-stat";
-                vortexText.innerText = "VORTEX INTENSITY: 0%";
+                if (flowStatusText) flowStatusText.innerText = "LAMINAR";
+                if (vortexText) vortexText.innerText = "0%";
             } else if (currentMix >= 0.1 && currentMix < 0.6) {
-                flowStatusText.innerHTML = `<span>FLOW REGIME: BUFFETING (${(currentMix * 100).toFixed(0)}%)</span>`;
-                flowStatusText.className = "stat";
-                flowStatusText.style.color = "#ffaa00";
-                vortexText.innerText = `VORTEX INTENSITY: ${(currentMix * 80 + Math.random() * 4).toFixed(1)}%`;
-                vortexText.style.color = "#ccc";
+                if (flowStatusText) flowStatusText.innerText = `BUFFETING (${(currentMix * 100).toFixed(0)}%)`;
+                if (vortexText) vortexText.innerText = `${(currentMix * 80 + Math.random() * 4).toFixed(1)}%`;
             } else {
-                flowStatusText.innerHTML = "<span>FLOW REGIME: MAX TURBULENCE</span>";
-                flowStatusText.className = "stat danger-stat";
-                flowStatusText.style.color = "";
-                vortexText.innerText = `VORTEX INTENSITY: ${(90 + Math.random() * 8).toFixed(1)}%`;
-                vortexText.style.color = "#ff2a55";
+                if (flowStatusText) flowStatusText.innerText = "MAX TURBULENCE";
+                if (vortexText) vortexText.innerText = `${(90 + Math.random() * 8).toFixed(1)}%`;
             }
             
-            // Synchronize skeleton animation keyframes seamlessly with the user input value matrix
-            brakeGroups.forEach(group => { group.pause(); group.goToFrame(group.from + currentMix * (group.to - group.from)); });
-            fanGroups.forEach(group => { group.speedRatio = 1.0 + (currentMix * 4.0); });
-        };
+            brakeGroups.forEach(group => { 
+                group.pause(); 
+                group.goToFrame(group.from + currentMix * (group.to - group.from)); 
+            });
+            
+            fanGroups.forEach(group => { 
+                group.speedRatio = 1.0 + (currentMix * 4.0); 
+            });
+        });
     }
     
     currentScene = scene;
 };
 
-// Initialize global engine lifecycles
+// ============================================================================
+// INITIALIZE GLOBAL ENGINE LIFECYCLES
+// ============================================================================
 createScene();
 window.addEventListener("resize", function () { engine.resize(); });
 engine.runRenderLoop(function () { if (currentScene) currentScene.render(); });

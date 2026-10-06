@@ -1,53 +1,87 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const uiToggleBtn = document.getElementById("ui-toggle-btn");
-    const leftContainer = document.getElementById("left-container");
-    const floatingToolbar = document.getElementById("floating-toolbar");
-    let uiVisible = true;
+    // 1. NOVI TOP BAR SISTEM (Otvaranje I i S panela)
+    const mobileInfoBtn = document.getElementById("mobile-info-btn");
+    const mobileStatsBtn = document.getElementById("mobile-stats-btn");
+    const infoPanel = document.getElementById("info-panel");
+    const statsPanel = document.getElementById("stats-panel");
 
-    uiToggleBtn.addEventListener("click", () => {
-        uiVisible = !uiVisible;
-        if(uiVisible) {
-            leftContainer.classList.remove("hidden");
-            if (window.innerWidth <= 768) floatingToolbar.classList.remove("hidden");
-            uiToggleBtn.innerText = "HIDE UI";
-        } else {
-            leftContainer.classList.add("hidden");
-            floatingToolbar.classList.add("hidden");
-            uiToggleBtn.innerText = "SHOW UI";
+if (mobileInfoBtn && infoPanel) {
+        mobileInfoBtn.addEventListener("click", () => {
+            if (statsPanel && statsPanel.classList.contains("mobile-open")) {
+                statsPanel.classList.remove("mobile-open");
+                if (mobileStatsBtn) mobileStatsBtn.classList.remove("active");
+            }
+            const isOpen = infoPanel.classList.toggle("mobile-open");
+            mobileInfoBtn.classList.toggle("active", isOpen);
+
+            // NOVO: Svaki put kada se otvori panel, resetuj i pokreni kucanje!
+            if (isOpen) {
+                pokreniTeletypeKucanje();
+            }
+        });
+    }
+
+    if (mobileStatsBtn && statsPanel) {
+        mobileStatsBtn.addEventListener("click", () => {
+            if (infoPanel && infoPanel.classList.contains("mobile-open")) {
+                infoPanel.classList.remove("mobile-open");
+                if (mobileInfoBtn) mobileInfoBtn.classList.remove("active");
+            }
+            const isOpen = statsPanel.classList.toggle("mobile-open");
+            mobileStatsBtn.classList.toggle("active", isOpen);
+        });
+    }
+
+    // 2. TELETYPE EFEKAT ZA OPIS
+    const typeBody = document.getElementById("type-body");
+    const loadingScreen = document.getElementById("loading-screen");
+    const textToType = "CONCEPT: INTERACTIVE SIMULATION OF THE HPA AXIS BIOLOGICAL CASCADE.\n\nTECH SOLUTIONS: ENGINEERED IN BABYLON.JS UTILIZING DYNAMIC PBR MATERIAL OVERRIDES, PROCEDURAL EMISSION MASKING, AND A DETERMINISTIC TIMELINE STATE-MACHINE.";
+    let isTyping = false;
+
+    function pokreniTeletypeKucanje() {
+        if (!typeBody || isTyping) return;
+        isTyping = true;
+        let index = 0; 
+        typeBody.innerHTML = ""; 
+        
+        function typeChar() {
+            if (index < textToType.length) {
+                let char = textToType.charAt(index);
+                if (char === '\\' && textToType.charAt(index + 1) === 'n') {
+                    typeBody.innerHTML += "<br>"; 
+                    index += 2; 
+                } else {
+                    typeBody.innerHTML += char;
+                    index++;
+                }
+                setTimeout(typeChar, Math.random() * 30 + 15);
+            } else {
+                isTyping = false; 
+            }
         }
-    });
+        typeChar();
+    }
 
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            if (window.innerWidth > 768) return;
-            const panelName = e.target.getAttribute('data-panel');
-            const panel = document.getElementById('panel-' + panelName);
-            const isOpen = panel && panel.classList.contains('active-panel');
-            
-            document.querySelectorAll('#left-container > .panel-box:not(#panel-sliders)').forEach(box => box.classList.remove('active-panel'));
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            
-            if (!isOpen && panel) {
-                panel.classList.add('active-panel');
-                e.target.classList.add('active');
-            }
+    // 3. SFERA AKTIVACIJA KLASA
+    const wireframeButton = document.getElementById("wireframe-btn");
+    if (wireframeButton) {
+        wireframeButton.addEventListener("click", () => {
+            wireframeButton.classList.toggle("active");
         });
-    });
+    }
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const target = e.target.getAttribute('data-target');
-            
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-
-            document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
-            const targetControls = document.getElementById(`${target}-controls`);
-            if (targetControls) targetControls.classList.add('active');
-
-            if(window.loadSimulation) {
-                window.loadSimulation(target);
-            }
+    // 4. STRIPOVANJE LOADING PARAVANA
+    if (loadingScreen) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === "style" && loadingScreen.style.display === "none") {
+                    setTimeout(pokreniTeletypeKucanje, 500);
+                    observer.disconnect(); 
+                }
+            });
         });
-    });
+        observer.observe(loadingScreen, { attributes: true });
+    } else {
+        setTimeout(pokreniTeletypeKucanje, 1000);
+    }
 });

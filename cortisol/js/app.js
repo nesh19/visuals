@@ -8,43 +8,23 @@ const engine = new BABYLON.Engine(canvas, true);
 let currentScene = null;
 let isWireframe = false;
 
+// Geometry Verification Trigger linked directly to the interactive 3D Sphere
 const wireframeBtn = document.getElementById("wireframe-btn");
 if (wireframeBtn) {
     wireframeBtn.onclick = () => {
         isWireframe = !isWireframe;
+        
+        // Tvoja originalna logika za boju i ivice
         wireframeBtn.style.color = isWireframe ? "#ffffff" : "#aaa";
         wireframeBtn.style.borderColor = isWireframe ? "#ffffff" : "rgba(255,255,255,0.1)";
-        if(currentScene) {
+        
+        if (currentScene) {
             // Traverse scene graph hierarchy to toggle structural rendering topologies
-            currentScene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
+            currentScene.materials.forEach(mat => { 
+                // Ignorišemo inkMat materijal pozadine kako bi fluid ostao tečan i u žičanom režimu
+                if (mat && mat.name !== "inkMat") mat.wireframe = isWireframe; 
+            });
         }
-    };
-}
-
-const tonemapSelect = document.getElementById("tonemapSelect");
-if (tonemapSelect) {
-    tonemapSelect.onchange = (e) => {
-        if(!currentScene) return;
-        // Map hardware lookup matrices directly to dynamic image processing buffers
-        if (e.target.value === "aces") {
-            currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
-            currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-        } else if (e.target.value === "standard") {
-            currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
-            currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
-        } else {
-            currentScene.imageProcessingConfiguration.toneMappingEnabled = false;
-        }
-    };
-}
-
-const iblSlider = document.getElementById("iblSlider");
-if (iblSlider) {
-    iblSlider.oninput = (e) => {
-        const val = parseFloat(e.target.value);
-        const iblValElem = document.getElementById("iblVal");
-        if (iblValElem) iblValElem.innerText = val.toFixed(1);
-        if(currentScene) currentScene.environmentIntensity = val;
     };
 }
 
@@ -62,12 +42,6 @@ const initSimulation = async function () {
     if (currentScene) {
         currentScene.dispose();
     }
-
-    // Set fallback dashboard control configurations
-    if (iblSlider) iblSlider.value = 1.0;
-    const iblValElem = document.getElementById("iblVal");
-    if (iblValElem) iblValElem.innerText = "1.0";
-    if (tonemapSelect) tonemapSelect.value = "aces";
 
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
@@ -95,7 +69,7 @@ const initSimulation = async function () {
 
     // Apply specific viewport projection coordinate translates for mobile displays
     if (window.innerWidth <= 1024) {
-    camera.targetScreenOffset = new BABYLON.Vector2(0, 0.06); 
+    camera.targetScreenOffset = new BABYLON.Vector2(0, 0.1); 
     }
 
     // Bind pre-filtered environmental radiance textures to manage linear PBR specular reflections
@@ -136,7 +110,15 @@ const initSimulation = async function () {
             if (framingBehavior) {
                 framingBehavior.framingTime = 0;
                 framingBehavior.elevationReturnTime = -1;
+                if (window.innerWidth <= 1366) {
+                    // Zum za mobilne uređaje (manji broj = bliže ekranu)
+                    framingBehavior.radiusScale = 0.75; 
+                } else {
+                    // Zum za desktop (1.0 je standardna udaljenost)
+                    framingBehavior.radiusScale = 1.0; 
+                }
                 framingBehavior.zoomOnMeshesHierarchy(scene.meshes);
+                
             }
         });
 
@@ -260,13 +242,14 @@ const initSimulation = async function () {
         const annoTitle = document.getElementById("anno-title");
         const annoText = document.getElementById("anno-text");
         const annoBtn = document.getElementById("anno-unlock-btn");
+        const wireframeBtn = document.getElementById("wireframe-btn");
 
         const checkpoints = [
             { limit: 0.1, target: "geo_eye", title: "Eyes & Optic Nerve", text: "Visual stimuli trigger the optical pathways, sending high-priority environmental data directly to the brain's processing centers." },
-            { limit: 0.3, target: "geo_brain_midbrain", title: "Amygdala & Hypothalamus", text: "Threat detected. The amygdala processes the risk and alerts the hypothalamus, the body's master command center, to initiate fight-or-flight." },
-            { limit: 0.6, target: "geo_adrenal_medulla", title: "Adrenal Medulla (Inner)", text: "Immediate Shock. The sympathetic nervous system triggers the adrenal medulla to flood the bloodstream with Epinephrine (Adrenaline)." },
-            { limit: 0.8, target: "geo_heart", title: "Heart & Lungs", text: "Cardiopulmonary Overdrive. Heart rate spikes to pump blood rapidly, while lungs expand bronchioles for maximum oxygen absorption." },
-            { limit: 0.9, target: "geo_adrenal_cortex", title: "Adrenal Cortex (Outer)", text: "The Sustained Response. The HPA axis reaches the adrenal cortex, releasing Cortisol to mobilize energy reserves and sustain the body through prolonged stress." },
+            { limit: 0.2, target: "geo_brain_midbrain", title: "Amygdala & Hypothalamus", text: "Threat detected. The amygdala processes the risk and alerts the hypothalamus, the body's master command center, to initiate fight-or-flight." },
+            { limit: 0.4, target: "geo_adrenal_medulla", title: "Adrenal Medulla (Inner)", text: "Immediate Shock. The sympathetic nervous system triggers the adrenal medulla to flood the bloodstream with Epinephrine (Adrenaline)." },
+            { limit: 0.6, target: "geo_heart", title: "Heart & Lungs", text: "Cardiopulmonary Overdrive. Heart rate spikes to pump blood rapidly, while lungs expand bronchioles for maximum oxygen absorption." },
+            { limit: 0.8, target: "geo_adrenal_cortex", title: "Adrenal Cortex (Outer)", text: "The Sustained Response. The HPA axis reaches the adrenal cortex, releasing Cortisol to mobilize energy reserves and sustain the body through prolonged stress." },
             { limit: 1.0, target: "geo_liver", title: "Liver", text: "Metabolic Sustenance. Cortisol triggers the liver to manufacture new glucose (gluconeogenesis), ensuring a steady, long-term fuel supply dedicated primarily to the brain." }
         ];
         
@@ -287,6 +270,7 @@ const initSimulation = async function () {
                     isSliderLocked = false;
                     if (annoContainer) annoContainer.style.display = "none";
                     if (sliderWrapper) sliderWrapper.style.display = "block";
+                    if (wireframeBtn) wireframeBtn.classList.remove("hide-sphere-dynamic");
                 }
 
                 let nextCheckpoint = checkpoints[currentPhaseIndex];
@@ -323,6 +307,7 @@ const initSimulation = async function () {
                     if (annoText) annoText.innerText = nextCheckpoint.text;
                     if (sliderWrapper) sliderWrapper.style.display = "none";
                     if (annoContainer) annoContainer.style.display = "block";
+                    if (wireframeBtn) wireframeBtn.classList.add("hide-sphere-dynamic");
                 }
             };
         }
@@ -332,6 +317,7 @@ const initSimulation = async function () {
             annoBtn.onclick = () => {
                 isSliderLocked = false;
                 if (annoContainer) annoContainer.style.display = "none";
+                if (wireframeBtn) wireframeBtn.classList.remove("hide-sphere-dynamic");
                 if (sliderWrapper) sliderWrapper.style.display = "block";
                 currentPhaseIndex++; 
                 if (currentPhaseIndex >= checkpoints.length) maxReachedValue = 1.0; 
@@ -401,13 +387,14 @@ const initSimulation = async function () {
             }
             
             // Update individual organ runtime material clones with specific chromatic profiles
+
             if (midbrainMat) {
                 midbrainMat.emissiveColor = new BABYLON.Color3(1.0, 0.2, 0.2);
-                midbrainMat.emissiveIntensity = midbrainPhase * 1.5; 
+                midbrainMat.emissiveIntensity = midbrainPhase * 1.2; 
             }
             if (medullaMat) {
                 medullaMat.emissiveColor = new BABYLON.Color3(0.0, 0.5, 1.0); 
-                medullaMat.emissiveIntensity = medullaPhase * 4;
+                medullaMat.emissiveIntensity = medullaPhase * 3;
             }
             if (pituitaryMat) {
                 pituitaryMat.emissiveColor = new BABYLON.Color3(0.8, 0.8, 1.0);

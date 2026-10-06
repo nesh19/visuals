@@ -8,45 +8,25 @@ const engine = new BABYLON.Engine(canvas, true);
 let currentScene = null;
 let isWireframe = false;
 
+// Geometry Verification Trigger linked directly to the interactive 3D Sphere
 const wireframeBtn = document.getElementById("wireframe-btn");
 if (wireframeBtn) {
     wireframeBtn.onclick = () => {
         isWireframe = !isWireframe;
+        
+        // Zadržavamo originalnu logiku stilizovanja i prstena na sferi
         wireframeBtn.style.color = isWireframe ? "#ffffff" : "#aaa";
         wireframeBtn.style.borderColor = isWireframe ? "#ffffff" : "rgba(255,255,255,0.1)";
-        if(currentScene) {
-            // Traverse scene graphics nodes to override geometry drawing modes
-            currentScene.materials.forEach(mat => { if (mat) mat.wireframe = isWireframe; });
+        
+        if (currentScene) {
+            // Prolazimo kroz sve materijale scene i palimo žičanu topologiju
+            currentScene.materials.forEach(mat => { 
+                if (mat) mat.wireframe = isWireframe; 
+            });
         }
     };
 }
 
-const tonemapSelect = document.getElementById("tonemapSelect");
-if (tonemapSelect) {
-    tonemapSelect.onchange = (e) => {
-        if(!currentScene) return;
-        // Map hardware look-up configurations to active post-processing pipelines
-        if (e.target.value === "aces") {
-            currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
-            currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
-        } else if (e.target.value === "standard") {
-            currentScene.imageProcessingConfiguration.toneMappingEnabled = true;
-            currentScene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_STANDARD;
-        } else {
-            currentScene.imageProcessingConfiguration.toneMappingEnabled = false;
-        }
-    };
-}
-
-const iblSlider = document.getElementById("iblSlider");
-if (iblSlider) {
-    iblSlider.oninput = (e) => {
-        const val = parseFloat(e.target.value);
-        const iblValElem = document.getElementById("iblVal");
-        if (iblValElem) iblValElem.innerText = val.toFixed(1);
-        if(currentScene) currentScene.environmentIntensity = val;
-    };
-}
 // ============================================================================
 // ASYNCHRONOUS ENGINE INITIALIZATION & HARDWARE TARGET ALLOCATION
 // ============================================================================
@@ -62,12 +42,6 @@ const initSimulation = async function () {
         currentScene.dispose(); // Release graphic hardware instances to eliminate leaks
     }
 
-    // Enforce baseline parameter states for incoming assets
-    if (iblSlider) iblSlider.value = 1.0;
-    const iblValElem = document.getElementById("iblVal");
-    if (iblValElem) iblValElem.innerText = "1.0";
-    if (tonemapSelect) tonemapSelect.value = "aces";
-
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
@@ -78,7 +52,7 @@ const initSimulation = async function () {
     scene.imageProcessingConfiguration.contrast = 1;
 
     // Construct perspective projection matrix with rigid safety boundaries
-    const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 5, BABYLON.Vector3.Zero(), scene);
+    const camera = new BABYLON.ArcRotateCamera("camera", 2.0, 1.5, 5, BABYLON.Vector3.Zero(), scene);
     camera.attachControl(canvas, true);
     camera.inertia = 0.8;                
     camera.panningInertia = 0.5;         
@@ -91,8 +65,8 @@ const initSimulation = async function () {
     camera.minZ = 0.01; 
     camera.lowerRadiusLimit = 1.8; 
     camera.upperRadiusLimit = 20.0;
-    if (window.innerWidth <= 1024) {
-    camera.targetScreenOffset = new BABYLON.Vector2(0, 0.00); 
+    if (window.innerWidth <= 1366) {
+    camera.targetScreenOffset = new BABYLON.Vector2(0, 0.08); 
     }
 
     // Ingest pre-filtered radiance maps to calculate PBR surface equations
@@ -123,6 +97,16 @@ const initSimulation = async function () {
             if (framingBehavior) {
                 framingBehavior.framingTime = 0;
                 framingBehavior.elevationReturnTime = -1;
+
+                // FIKS: Razdvajamo logiku zuma za Desktop i Mobile
+                if (window.innerWidth <= 1366) {
+                    // Zum za mobilne uređaje (manji broj = bliže ekranu)
+                    framingBehavior.radiusScale = 0.85; 
+                } else {
+                    // Zum za desktop (1.0 je standardna udaljenost)
+                    framingBehavior.radiusScale = 1.0; 
+                }
+                
                 framingBehavior.zoomOnMeshesHierarchy(scene.meshes);
             }
         });
@@ -213,12 +197,10 @@ const initSimulation = async function () {
                 const val = slider ? parseFloat(slider.value) : 0;
                 
                 // Track spatial states to render diagnostic metadata changes down to the DOM containers
-                const label = document.getElementById(item.valId);
-                if (label) {
-                    if (val === 1) label.innerText = "1.00 (Before)";
-                    else if (val === 0) label.innerText = "0.00 (After)";
-                    else label.innerText = val.toFixed(2);
-                }
+                    const label = document.getElementById(item.valId);
+                    if (label) {
+                        label.innerText = val.toFixed(2); // Prisili pretraživač da uvek piše samo npr. 1.00 ili 0.45
+                    }
 
                 // Inject normalized slider influence weight coefficients straight into the active vertex targets
                 if (headMesh && headMesh.morphTargetManager && headMesh.morphTargetManager.getTarget(item.index)) {

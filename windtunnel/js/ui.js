@@ -1,53 +1,118 @@
 document.addEventListener("DOMContentLoaded", () => {
+    // ============================================================================
+    // 1. MOBILNI UI TOGGLE
+    // ============================================================================
     const uiToggleBtn = document.getElementById("ui-toggle-btn");
     const leftContainer = document.getElementById("left-container");
     const floatingToolbar = document.getElementById("floating-toolbar");
     let uiVisible = true;
 
-    uiToggleBtn.addEventListener("click", () => {
-        uiVisible = !uiVisible;
-        if(uiVisible) {
-            leftContainer.classList.remove("hidden");
-            if (window.innerWidth <= 768) floatingToolbar.classList.remove("hidden");
-            uiToggleBtn.innerText = "HIDE UI";
-        } else {
-            leftContainer.classList.add("hidden");
-            floatingToolbar.classList.add("hidden");
-            uiToggleBtn.innerText = "SHOW UI";
+    if (uiToggleBtn) {
+        uiToggleBtn.addEventListener("click", () => {
+            uiVisible = !uiVisible;
+            if (uiVisible) {
+                if (leftContainer) leftContainer.style.display = "block";
+                if (window.innerWidth <= 1024 && floatingToolbar) floatingToolbar.style.display = "flex";
+                uiToggleBtn.innerText = "HIDE UI";
+            } else {
+                if (leftContainer) leftContainer.style.display = "none";
+                if (floatingToolbar) floatingToolbar.style.display = "none";
+                uiToggleBtn.innerText = "SHOW UI";
+            }
+        });
+    }
+
+    // ============================================================================
+    // NOVO: LOGIKA ZA MOBILNE POP-UP PANELE (Cortisol standard)
+    // ============================================================================
+    const infoBtn = document.getElementById("mobile-info-btn");
+    const statsBtn = document.getElementById("mobile-stats-btn");
+    const infoPanel = document.getElementById("info-panel");
+    const statsPanel = document.getElementById("stats-panel");
+
+    if (infoBtn && statsBtn && infoPanel && statsPanel) {
+        // Otvaranje/Zatvaranje INFO panela
+        infoBtn.addEventListener("click", () => {
+            if (statsPanel.classList.contains("mobile-open")) {
+                statsPanel.classList.remove("mobile-open");
+                statsBtn.classList.remove("active");
+            }
+            infoPanel.classList.toggle("mobile-open");
+            infoBtn.classList.toggle("active");
+        });
+
+        // Otvaranje/Zatvaranje STATS panela
+        statsBtn.addEventListener("click", () => {
+            if (infoPanel.classList.contains("mobile-open")) {
+                infoPanel.classList.remove("mobile-open");
+                infoBtn.classList.remove("active");
+            }
+            statsPanel.classList.toggle("mobile-open");
+            statsBtn.classList.toggle("active");
+        });
+    }
+
+    // ============================================================================
+    // 2. TELETYPE EFEKAT (Aerodynamics Log)
+    // ============================================================================
+    const typeBody = document.getElementById("type-body");
+    const loadingScreen = document.getElementById("loading-screen");
+
+    const textToType = "CONCEPT: REAL-TIME AERODYNAMIC DRONE SIMULATION.\\nTECH SOLUTIONS: ENGINEERED IN BABYLON.JS UTILIZING GPU PARTICLE SYSTEMS, DYNAMIC WIND VELOCITY PARAMETERS, AND INTERACTIVE FLOW REGIME TRANSITIONS.";
+    
+    let isTyping = false;
+
+    function pokreniTeletypeKucanje() {
+        if (!typeBody || isTyping) return;
+        isTyping = true;
+        
+        let index = 0; 
+        typeBody.innerHTML = ""; 
+        
+        function typeChar() {
+            if (index < textToType.length) {
+                let char = textToType.charAt(index);
+                
+                if (char === '\\' && textToType.charAt(index + 1) === 'n') {
+                    typeBody.innerHTML += "<br>"; 
+                    index += 2; 
+                } else {
+                    typeBody.innerHTML += char;
+                    index++;
+                }
+                
+                setTimeout(typeChar, Math.random() * 30 + 15);
+            } else {
+                isTyping = false; 
+            }
         }
-    });
+        typeChar();
+    }
 
-    document.querySelectorAll('.tool-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            if (window.innerWidth > 768) return;
-            const panelName = e.target.getAttribute('data-panel');
-            const panel = document.getElementById('panel-' + panelName);
-            const isOpen = panel && panel.classList.contains('active-panel');
-            
-            document.querySelectorAll('#left-container > .panel-box:not(#panel-sliders)').forEach(box => box.classList.remove('active-panel'));
-            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-            
-            if (!isOpen && panel) {
-                panel.classList.add('active-panel');
-                e.target.classList.add('active');
-            }
+    // ============================================================================
+    // 3. WIREFRAME SPHERE KLASA
+    // ============================================================================
+    const wireframeButton = document.getElementById("wireframe-btn");
+    if (wireframeButton) {
+        wireframeButton.addEventListener("click", () => {
+            wireframeButton.classList.toggle("active");
         });
-    });
+    }
 
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const target = e.target.getAttribute('data-target');
-            
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            e.target.classList.add('active');
-
-            document.querySelectorAll('.panel-section').forEach(p => p.classList.remove('active'));
-            const targetControls = document.getElementById(`${target}-controls`);
-            if (targetControls) targetControls.classList.add('active');
-
-            if(window.loadSimulation) {
-                window.loadSimulation(target);
-            }
+    // ============================================================================
+    // 4. STRIPOVANJE LOADING PARAVANA
+    // ============================================================================
+    if (loadingScreen) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === "style" && loadingScreen.style.display === "none") {
+                    setTimeout(pokreniTeletypeKucanje, 500);
+                    observer.disconnect(); 
+                }
+            });
         });
-    });
+        observer.observe(loadingScreen, { attributes: true });
+    } else {
+        setTimeout(pokreniTeletypeKucanje, 1000);
+    }
 });
