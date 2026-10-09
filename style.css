@@ -64,6 +64,34 @@ body {
 .stat-val { 
     float: right; color: var(--neon-blue); font-weight: bold; text-shadow: 0 0 5px var(--hologram-glow);
 }
+/* ============================================================================
+ SCROLL GUIDE
+   ============================================================================ */
+#scroll-guide {
+    position: fixed !important;
+    bottom: 40px !important; 
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    z-index: 2900 !important; 
+    pointer-events: none !important; 
+    
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), transform 0.8s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    opacity: 1 !important;
+}
+
+.scroll-text {
+    font-family: 'Roboto Mono', monospace !important;
+    font-size: clamp(0.65rem, 2.5vw, 0.75rem) !important;
+    color: var(--neon-blue) !important;
+    letter-spacing: 3px !important;
+    text-shadow: 0 0 8px var(--hologram-glow) !important;
+    opacity: 0.7 !important;
+}
+
+#scroll-guide.scroll-disappear {
+    opacity: 0 !important;
+    transform: translate(-50%, 20px) !important; /* Meko klizi naniže kroz pod ekrana monitora */
+}
 
 #left-container { 
     position: absolute; top: 40px; left: 4%; width: 300px; 

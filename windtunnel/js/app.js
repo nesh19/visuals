@@ -12,10 +12,10 @@ const isMobileDevice = window.innerWidth < 768;
 
 const CONFIG = {
     particleCount: isMobileDevice ? 8000 : 60000,         
-    particleSize: 0.1,                 
+    particleSize: 0.05,                 
     beamRadius: 3.5,                 
     tunnelLength: 8.0,
-    baseSpeed: 12.0,
+    baseSpeed: 18.0,
     turboSpeed: 50.0,
     zOffset: -0.6,
     minBaseAlpha: 0.5,
@@ -62,6 +62,7 @@ if (wireframeBtn) {
         varying vec2 vUv;
 
         void main() {
+            // Vraćeno na stabilnih 1.0 radi očuvanja projekcione matrice geometrije
             gl_Position = worldViewProjection * vec4(position, 1.0);
             vUv = uv;
         }
@@ -71,8 +72,8 @@ if (wireframeBtn) {
         precision highp float;
         varying vec2 vUv;
         uniform float time;
+        uniform float speed; // NOVO: Primamo brzinu sa slajdera direktno iz JavaScript-a!
         
-        // Funkcije direktno preuzete iz tvog inkShader.js
         float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 
         float noise(vec2 p) {
@@ -93,25 +94,36 @@ if (wireframeBtn) {
 
         void main() {
             vec2 p = vUv * 2.0 - 1.0;
-            vec2 scaledP = p * 3.0; 
             
-            vec2 flowP = scaledP + vec2(time * 0.2, time * 0.2);
+            // FIKS KONTRASTA: Smanjeno sa 4.0 na 1.8. Vrtlozi postaju krupniji, mekši i realističniji!
+            vec2 scaledP = p * 1.8; 
+            
+            // FIKS BRZINE: Množimo vreme sa speed uniformom. Kada slajder ode na max, dim leti!
+            float dynamicTime = time * (1.0 + speed * 2.5);
+            vec2 flowP = scaledP + vec2(0.0, dynamicTime * 0.4); 
             
             vec2 q = vec2(0.0);
-            q.x = fbm(flowP + 0.05 * time);
-            q.y = fbm(flowP + vec2(1.0) + 0.05 * time);
+            q.x = fbm(flowP + 0.05 * dynamicTime);
+            q.y = fbm(flowP + vec2(1.0) + 0.05 * dynamicTime);
 
             vec2 r = vec2(0.0);
-            r.x = fbm(flowP + 2.0 * q + vec2(1.7, 9.2) + 0.1 * time);
-            r.y = fbm(flowP + 2.0 * q + vec2(8.3, 2.8) + 0.1 * time);
+            r.x = fbm(flowP + 2.0 * q + vec2(1.7, 9.2) + 0.05 * dynamicTime);
+            r.y = fbm(flowP + 2.0 * q + vec2(8.3, 2.8) + 0.05 * dynamicTime);
 
             float f = fbm(flowP + r);
             
-            // Zadržan visoki kontrast i duboka plava boja
-            float fluidContrast = smoothstep(0.4, 0.9, f);
+            // MEKŠI PRELAZ: Proširen smoothstep opseg za ublažavanje prevelikog kontrasta
+            float fluidContrast = smoothstep(0.2, 0.8, f);
+            
+            // FIKS MASKE CENTRA: Sužavamo mlaz na 0.45 širine ekrana da precizno gađa samo trup drona
+            float centerMask = smoothstep(0.45, 0.0, abs(p.x)); 
+            
+            // ŠAH-MAT: Množenjem fluid dobija laserski tačan raspored samo u sredini ekrana!
+            fluidContrast *= centerMask;
+
             vec3 color = mix(
-                vec3(0.001, 0.001, 0.003), 
-                vec3(0.01, 0.06, 0.2),     
+                vec3(0.002, 0.003, 0.008), 
+                vec3(0.02, 0.12, 0.38), // Blago utišan neon radi elegantnijeg kontrasta     
                 fluidContrast
             );
 
@@ -261,6 +273,22 @@ const createScene = async function () {
             child.material.environmentTexture = scene.environmentTexture;
         }
          child.renderingGroupId = 1; 
+    });
+ 
+    scene.materials.forEach((mat) => {
+        if (mat instanceof BABYLON.PBRMaterial) {
+            
+            mat.emissiveColor = new BABYLON.Color3(1.0, 1.0, 1.0); 
+            
+            mat.emissiveIntensity = 6.5; 
+
+            mat.useEmissiveAsIllumination = true;
+
+            mat.environmentTexture = scene.environmentTexture;
+            mat.lightingEnabled = true;
+            
+            console.log(`Glavni PBR materijal drona [${mat.name}] uspešno konfigurisan sa emisionom mapom.`);
+        }
     });
 
     let trisSum = 0;

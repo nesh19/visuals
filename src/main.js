@@ -30,22 +30,24 @@ const createScene = function () {
     // ============================================================================
     const camera = new UniversalCamera("mainCamera", new Vector3(0, 0, -20), scene);
     camera.setTarget(Vector3.Zero());
+
+    camera.fov = 0.8; 
+
     const updateCameraFOV = () => {
-    if (engine.getRenderWidth() < engine.getRenderHeight()) {
-        camera.fovMode = window.BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED;
-    } else {
-        camera.fovMode = window.BABYLON.Camera.FOVMODE_VERTICAL_FIXED;
-    }
+        if (engine.getRenderWidth() < engine.getRenderHeight()) {
+            camera.fovMode = window.BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED;
+        } else {
+            camera.fovMode = window.BABYLON.Camera.FOVMODE_VERTICAL_FIXED;
+        }
     };
     updateCameraFOV();
 
     // ============================================================================
     // SISTEM OSVJETLJENJA I OKRUŽENJA (PBR HDRI + Camera Light)
     // ============================================================================
-    const hdrTexture = new window.BABYLON.CubeTexture.CreateFromPrefilteredData(
-        "https://playground.babylonjs.com/textures/environment.dds", scene
+    const hdrTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("./assets/abstract2.env", 
+    scene
     );
-    hdrTexture.level = 3.3; 
     hdrTexture.rotationY = 3.14;
     scene.environmentTexture = hdrTexture;
 
@@ -100,6 +102,7 @@ const createScene = function () {
     probe.renderList.push(backgroundQuad);
     probe.renderList.push(haloQuad);
     probe.position = new Vector3(0, 0, -12); 
+    
 
     // ============================================================================
     // SOLID VOLUME PBR GLASS 
@@ -115,16 +118,16 @@ const createScene = function () {
     baseGlassMat.albedoColor = new Color3(0.1, 0.1, 0.1); 
     
     baseGlassMat.clearCoat.isEnabled = true;
-    baseGlassMat.clearCoat.intensity = 0.5;
-    baseGlassMat.clearCoat.roughness = 0.12; 
+    baseGlassMat.clearCoat.intensity = 0.75;
+    baseGlassMat.clearCoat.roughness = 0.002; 
 
-    baseGlassMat.environmentIntensity = 3.5;
+    baseGlassMat.environmentIntensity = 5.5;
     
     baseGlassMat.subSurface.isRefractionEnabled = true;
     baseGlassMat.subSurface.refractionTexture = probe.cubeTexture; 
-    baseGlassMat.subSurface.refractionIntensity = 2.5; 
-    baseGlassMat.subSurface.indexOfRefraction = 1.55; 
-    baseGlassMat.subSurface.maximumThickness = 7.0; 
+    baseGlassMat.subSurface.refractionIntensity = 2.2; 
+    baseGlassMat.subSurface.indexOfRefraction = 1.15; 
+    baseGlassMat.subSurface.maximumThickness = 4.0; 
     baseGlassMat.subSurface.useThicknessAsDepth = true;
     baseGlassMat.subSurface.tintColor = new Color3(0.9, 0.9, 1.0); 
     baseGlassMat.subSurface.isTranslucencyEnabled = true;
@@ -132,7 +135,7 @@ const createScene = function () {
     
     baseGlassMat.iridescence.isEnabled = true;
     baseGlassMat.iridescence.intensity = 1.0;
-    baseGlassMat.iridescence.indexOfRefraction = 1.3;
+    baseGlassMat.iridescence.indexOfRefraction = 0.9;
 
     // ============================================================================
     // GEOMETRIC BOUNDING BOX & HARDWARE PIVOT CENTERING
@@ -171,16 +174,28 @@ const createScene = function () {
         const root = result.meshes[0];
         root.scaling = new Vector3(scaleFactor, scaleFactor, scaleFactor);
         
+        // Pretvaramo parametar u niz malih slova radi lakšeg poređenja
+        const allowedKeywords = Array.isArray(targetMeshName) 
+            ? targetMeshName.map(name => name.toLowerCase())
+            : [targetMeshName.toLowerCase()];
+
         for (let mesh of result.meshes) {
-            if (mesh.name !== "__root__" && !mesh.name.toLowerCase().includes(targetMeshName)) {
+            const meshNameLower = mesh.name.toLowerCase();
+            
+            // Proveravamo da li naziv mesha sadrži bilo koju od navedenih reči
+            const isAllowed = allowedKeywords.some(keyword => meshNameLower.includes(keyword));
+
+            if (mesh.name !== "__root__" && !isAllowed) {
                 mesh.isVisible = false;
                 mesh.setEnabled(false); 
+                mesh.isPickable = false;
                 continue;
             }
             if (mesh.getTotalVertices() > 0) {
                 mesh.hasVertexAlpha = false; 
                 mesh.useVertexColors = false; 
                 mesh.material = baseGlassMat;
+                mesh.isPickable = true;
             }
         }
         centrirajPivotObjekta(root);
@@ -210,7 +225,7 @@ const createScene = function () {
 
     // MODEL 2: Dron 
     SceneLoader.ImportMeshAsync("", "windtunnel/assets/", "dron.glb", scene).then((result) => {
-        const root = processLoadedModel(result, -12, "fuselage", 1.0); 
+        const root = processLoadedModel(result, -12, "fuselage",  1.0); 
         root.position.x = 0.5;
         root.setEnabled(false);
         models[2] = root;
@@ -241,15 +256,35 @@ const createScene = function () {
             targetScroll += e.deltaY * 0.004; 
         }
     });
-
-// ============================================================================
-    // 7.5 KLIK NA MODEL - DIREKTAN ULAZAK U SIMULACIJU
+    
+    // ============================================================================
+    // 7.5 HOVER I KLIK NA MODEL - PROMJENA KURSORA I DIREKTAN ULAZAK
     // ============================================================================
     scene.onPointerObservable.add((pointerInfo) => {
-        if (pointerInfo.type === window.BABYLON.PointerEventTypes.POINTERDOWN && !interakcijaUToku) {
-            
-            if (pointerInfo.pickInfo.hit && pointerInfo.pickInfo.pickedMesh) {
+        if (interakcijaUToku) return;
+
+        // 1. HOVER DETEKCIJA (Eksplicitan raycast pri pokretu miša)
+        if (pointerInfo.type === window.BABYLON.PointerEventTypes.POINTERMOVE) {
+            const pick = scene.pick(scene.pointerX, scene.pointerY, (mesh) => {
+                return mesh.isVisible && mesh.isEnabled() && mesh.isPickable;
+            });
+
+            if (pick && pick.hit && pick.pickedMesh) {
+                canvas.style.cursor = "pointer";
+            } else {
+                canvas.style.cursor = "default";
+            }
+        }
+
+        // 2. KLIK NA MODEL (Direktan ulazak u simulaciju)
+        if (pointerInfo.type === window.BABYLON.PointerEventTypes.POINTERDOWN) {
+            const pick = scene.pick(scene.pointerX, scene.pointerY, (mesh) => {
+                return mesh.isVisible && mesh.isEnabled() && mesh.isPickable;
+            });
+
+            if (pick && pick.hit && pick.pickedMesh) {
                 interakcijaUToku = true; 
+                canvas.style.cursor = "default";
                 
                 if (activeModelIndex === 0) {
                     window.location.href = "./cortisol/index.html"; 
@@ -261,7 +296,7 @@ const createScene = function () {
             }
         }
     });
-
+    
     // ============================================================================
     // 8. GRAPHICS PIPELINE & RENDERING LOOP STATE MACHINE
     // ============================================================================
@@ -363,6 +398,36 @@ const createScene = function () {
 
     return scene;
 };
+
+// ============================================================================
+// SCROLL GUIDE TRIGGER
+// ============================================================================
+let hasScrolledOnce = false;
+const scrollGuide = document.getElementById("scroll-guide");
+
+function handleFirstScroll() {
+    if (!hasScrolledOnce) {
+        hasScrolledOnce = true;
+        
+        if (scrollGuide) {
+            // Dodajemo CSS klasu koja pokreće meko sklanjanje naniže
+            scrollGuide.classList.add("scroll-disappear");
+            
+            // Potpuno brišemo element iz memorije nakon 800ms kada završi animaciju
+            setTimeout(() => {
+                scrollGuide.remove();
+            }, 800);
+        }
+        
+        // ISTOG TRENUTKA SKIDAMO OSLUŠKIVAČE DA RASTERETIMO PROCESOR
+        window.removeEventListener("wheel", handleFirstScroll);
+        window.removeEventListener("touchmove", handleFirstScroll);
+    }
+}
+
+// Kačimo ponovo detekciju na prozor pretraživača (uz passive: true za bolje performanse)
+window.addEventListener("wheel", handleFirstScroll, { passive: true });
+window.addEventListener("touchmove", handleFirstScroll, { passive: true });
 
 // ============================================================================
 // HARDWARE INITIALIZATION & RUNTIME EXECUTION PETLJA
