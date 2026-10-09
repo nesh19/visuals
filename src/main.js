@@ -259,10 +259,21 @@ const createScene = function () {
         let touchStartY = 0;
 
     window.addEventListener("touchstart", (e) => {
-        if (e.touches && e.touches.length > 0) {
-            touchStartY = e.touches[0].clientY;
-        }
-    }, { passive: true });
+            if (e.touches.length === 1) {
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        window.addEventListener("touchmove", (e) => {
+            if (!interakcijaUToku && e.touches.length === 1) {
+                const currentY = e.touches[0].clientY;
+                const deltaY = touchStartY - currentY; // Razlika u pikselima
+                touchStartY = currentY;
+                
+                // Faktor 0.006 podešava osjetljivost skrola na dodir
+                targetScroll += deltaY * 0.006; 
+            }
+        }, { passive: true });
 
     window.addEventListener("touchmove", (e) => {
         // Okidač koji meko sklanja [SCROLL_DOWN] natpis na dnu ekrana
