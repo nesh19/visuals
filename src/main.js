@@ -182,9 +182,13 @@ const models = [null, null, null];
         root2.setEnabled(false);
         models[2] = root2;
 
-        
+        // Prikazujemo prvi model (Heart)
+        if (models[0]) models[0].setEnabled(true);
+
+        console.log("All models loaded!");
+
     } catch (err) {
-        console.error("Error loading model:", err);
+        console.error("GError loading model:", err);
     }
 })();
     // ============================================================================
@@ -298,12 +302,11 @@ const models = [null, null, null];
         
         resolution.x = engine.getRenderWidth();
         resolution.y = engine.getRenderHeight();
-
         if (resolution.x < resolution.y) {
         camera.fovMode = window.BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED;
-        } else {
-            camera.fovMode = window.BABYLON.Camera.FOVMODE_VERTICAL_FIXED;
-        }
+    } else {
+        camera.fovMode = window.BABYLON.Camera.FOVMODE_VERTICAL_FIXED;
+    }
         
         currentScroll += (targetScroll - currentScroll) * 0.15;
         
