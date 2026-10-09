@@ -137,72 +137,52 @@ const createScene = function () {
     baseGlassMat.iridescence.intensity = 1.0;
     baseGlassMat.iridescence.indexOfRefraction = 0.9;
 
-    // ============================================================================
-    // GEOMETRIC BOUNDING BOX & HARDWARE PIVOT CENTERING
-    // ============================================================================
-    const centrirajPivotObjekta = (rootMesh) => {
-        const childMeshes = rootMesh.getChildMeshes(false, (node) => node.isVisible);
-        if (childMeshes.length === 0) return;
 
-        let min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
-        let max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
-        let hasGeometry = false;
+    // ============================================================================
+    // POPRAVLJENO SEKVENCIJALNO UČITAVANJE
+    // ============================================================================
+const models = [null, null, null];
 
-        childMeshes.forEach(m => {
-            if (m.getTotalVertices() > 0) {
-                m.computeWorldMatrix(true);
-                const meshMin = m.getBoundingInfo().boundingBox.minimumWorld;
-                const meshMax = m.getBoundingInfo().boundingBox.maximumWorld;
-                min = Vector3.Minimize(min, meshMin);
-                max = Vector3.Maximize(max, meshMax);
-                hasGeometry = true;
-            }
+(async () => {
+    try {
+        const targetMat = baseGlassMat; 
+
+        // MODEL 0: Heart
+        const res0 = await BABYLON.SceneLoader.ImportMeshAsync("", "assets/", "heart.glb", scene);
+        const root0 = res0.meshes[0];
+        res0.meshes.forEach(m => {
+            if (m.getTotalVertices() > 0) m.material = targetMat;
         });
+        root0.scaling = new BABYLON.Vector3(3, 3, 3); // <-- Dodato skaliranje
+        root0.setEnabled(false);
+        models[0] = root0;
 
-        if (hasGeometry) {
-            const centar = Vector3.Center(min, max);
-            rootMesh.setPivotPoint(centar, window.BABYLON.Space.WORLD);
-            rootMesh.position.x = 0;
-            rootMesh.position.y = 0; 
-        }
-    };
+        await new Promise(r => setTimeout(r, 100));
 
-    // ============================================================================
-    // UNIVERZALNA FUNKCIJA SA AUTOMATSKIM RE-PIVOTING PIPELINE-OM
-    // ============================================================================
-    const processLoadedModel = (result, zPosition, targetMeshName, scaleFactor = 1.0) => {
-        const root = result.meshes[0];
-        root.scaling = new Vector3(scaleFactor, scaleFactor, scaleFactor);
-        
-        // Pretvaramo parametar u niz malih slova radi lakšeg poređenja
-        const allowedKeywords = Array.isArray(targetMeshName) 
-            ? targetMeshName.map(name => name.toLowerCase())
-            : [targetMeshName.toLowerCase()];
+        // MODEL 1: Head
+        const res1 = await BABYLON.SceneLoader.ImportMeshAsync("", "assets/", "head.glb", scene);
+        const root1 = res1.meshes[0];
+        res1.meshes.forEach(m => {
+            if (m.getTotalVertices() > 0) m.material = targetMat;
+        });
+        root1.scaling = new BABYLON.Vector3(2.8,2.8, 2.8); // <-- Dodato skaliranje
+        root1.setEnabled(false);
+        models[1] = root1;
 
-        for (let mesh of result.meshes) {
-            const meshNameLower = mesh.name.toLowerCase();
-            
-            // Proveravamo da li naziv mesha sadrži bilo koju od navedenih reči
-            const isAllowed = allowedKeywords.some(keyword => meshNameLower.includes(keyword));
+        await new Promise(r => setTimeout(r, 100));
 
-            if (mesh.name !== "__root__" && !isAllowed) {
-                mesh.isVisible = false;
-                mesh.setEnabled(false); 
-                mesh.isPickable = false;
-                continue;
-            }
-            if (mesh.getTotalVertices() > 0) {
-                mesh.hasVertexAlpha = false; 
-                mesh.useVertexColors = false; 
-                mesh.material = baseGlassMat;
-                mesh.isPickable = true;
-            }
-        }
-        centrirajPivotObjekta(root);
-        root.position.z = zPosition;
-        return root;
-    };
+        // MODEL 2: Dron
+        const res2 = await BABYLON.SceneLoader.ImportMeshAsync("", "assets/", "dron.glb", scene);
+        const root2 = res2.meshes[0];
+        res2.meshes.forEach(m => {
+            if (m.getTotalVertices() > 0) m.material = targetMat;
+        });
+        root2.scaling = new BABYLON.Vector3(2.25, 2.25, 2.25); // <-- Dodato skaliranje
+        root2.position.x = 1;
+        root2.setEnabled(false);
+        models[2] = root2;
 
+<<<<<<< Updated upstream
     // ============================================================================
     // PIPELINE ZA UČITAVANJE ASINKRONIH GEOMETRIJSKIH JEDINICA
     // ============================================================================
@@ -230,7 +210,17 @@ const createScene = function () {
         root.setEnabled(false);
         models[2] = root;
     }).catch(err => console.error("Error loading Drone:", err));
+=======
+        // Prikazujemo prvi model (Heart)
+        if (models[0]) models[0].setEnabled(true);
 
+        console.log("All models loaded!");
+>>>>>>> Stashed changes
+
+    } catch (err) {
+        console.error("Error loading model:", err);
+    }
+})();
     // ============================================================================
     // 7. INPUT SCROLL MECHANICS & TIMING CONTEXT REGISTER
     // ============================================================================
@@ -342,6 +332,12 @@ const createScene = function () {
         
         resolution.x = engine.getRenderWidth();
         resolution.y = engine.getRenderHeight();
+
+        if (resolution.x < resolution.y) {
+        camera.fovMode = window.BABYLON.Camera.FOVMODE_HORIZONTAL_FIXED;
+        } else {
+            camera.fovMode = window.BABYLON.Camera.FOVMODE_VERTICAL_FIXED;
+        }
         
         currentScroll += (targetScroll - currentScroll) * 0.15;
         
@@ -379,15 +375,9 @@ const createScene = function () {
                     } 
                     else if (idx === 0) {
                         m.rotationQuaternion = null;
-                        const offsetX_degrees = 35;   
-                        const offsetY_degrees = 0;  
-                        const offsetZ_degrees = -15;   
-                        
-                        const scrollRotation = (time * 0.4) + (currentScroll * 4.0);
-                        
-                        m.rotation.x = offsetX_degrees * (Math.PI / 180);
-                        m.rotation.y = scrollRotation + (offsetY_degrees * (Math.PI / 180));
-                        m.rotation.z = offsetZ_degrees * (Math.PI / 180); 
+                        m.rotation.x = 0;
+                        m.rotation.y = (time * 0.4) + (currentScroll * 4.0);
+                        m.rotation.z = 0; 
                     }
                 } else {
                     m.setEnabled(false);
@@ -477,5 +467,4 @@ engine.runRenderLoop(() => {
 
 window.addEventListener("resize", () => {
     engine.resize();
-    updateCameraFOV(); 
 });
