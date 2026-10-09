@@ -178,6 +178,10 @@ const createScene = async function () {
     scene.collisionsEnabled = true;
 
     const cameraTarget = new BABYLON.Vector3(0, -0.3, -1); 
+    if (isMobileDevice) {
+        cameraTarget.y = -1.5; 
+        cameraTarget.z = -1.15;
+    }
     const initialRadius = isMobileDevice ? 8.2 : 6.2; // Blago prilagođena udaljenost za staklo mobilnog
     const initialAlpha = 0; 
     const initialBeta = 1.25;  
