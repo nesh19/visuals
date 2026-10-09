@@ -207,29 +207,42 @@ const createScene = function () {
     // PIPELINE ZA UČITAVANJE ASINKRONIH GEOMETRIJSKIH JEDINICA
     // ============================================================================
     const models = [null, null, null];
-    
-    // MODEL 0: Human Stress 
-    SceneLoader.ImportMeshAsync("", "cortisol/assets/", "human_stress_v01.glb", scene).then((result) => {
-        const root = processLoadedModel(result, -12, "mesh_heart", 26);
-        root.position.y = 0.1;
-        root.setEnabled(false);
-        models[0] = root;
-    }).catch(err => console.error("Error loading Stress model:", err));
 
-    // MODEL 1: Craniofacial Morph Viewer 
-    SceneLoader.ImportMeshAsync("", "craniofacial/assets/", "anatomical-morph-viewer.glb", scene).then((result) => {
-        const root = processLoadedModel(result, -12, "mesh_head", 10);
-        root.setEnabled(false);
-        models[1] = root;
-    }).catch(err => console.error("Error loading Craniofacial model:", err));
+    (async () => {
+        try {
+            // MODEL 0: Human Stress (Učitava se prvi i odmah prikazuje korisniku)
+            const result0 = await SceneLoader.ImportMeshAsync("", "cortisol/assets/", "human_stress_v01.glb", scene);
+            const root0 = processLoadedModel(result0, -12, "mesh_heart", 26);
+            root0.position.y = 0.1;
+            root0.setEnabled(false);
+            models[0] = root0;
+            console.log("Model 0 (Cortisol) spreman.");
 
-    // MODEL 2: Dron 
-    SceneLoader.ImportMeshAsync("", "windtunnel/assets/", "dron.glb", scene).then((result) => {
-        const root = processLoadedModel(result, -12, "fuselage",  1.0); 
-        root.position.x = 0.5;
-        root.setEnabled(false);
-        models[2] = root;
-    }).catch(err => console.error("Error loading Drone:", err));
+            // Pauza od 300ms da se GPU stabilizuje pre sledećeg modela
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // MODEL 1: Craniofacial Morph Viewer (Učitava se drugi u pozadini)
+            const result1 = await SceneLoader.ImportMeshAsync("", "craniofacial/assets/", "anatomical-morph-viewer.glb", scene);
+            const root1 = processLoadedModel(result1, -12, "mesh_head", 10);
+            root1.setEnabled(false);
+            models[1] = root1;
+            console.log("Model 1 (Craniofacial) spreman.");
+
+            // Pauza pre učitavanja drona
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // MODEL 2: Dron (Učitava se treći u pozadini)
+            const result2 = await SceneLoader.ImportMeshAsync("", "windtunnel/assets/", "dron.glb", scene);
+            const root2 = processLoadedModel(result2, -12, "fuselage", 1.0); 
+            root2.position.x = 0.5;
+            root2.setEnabled(false);
+            models[2] = root2;
+            console.log("Model 2 (Dron) spreman.");
+
+        } catch (err) {
+            console.error("Greška pri sekvencijalnom učitavanju modela:", err);
+        }
+    })();
 
     // ============================================================================
     // 7. INPUT SCROLL MECHANICS & TIMING CONTEXT REGISTER
