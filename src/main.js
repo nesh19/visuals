@@ -182,41 +182,7 @@ const models = [null, null, null];
         root2.setEnabled(false);
         models[2] = root2;
 
-<<<<<<< Updated upstream
-    // ============================================================================
-    // PIPELINE ZA UČITAVANJE ASINKRONIH GEOMETRIJSKIH JEDINICA
-    // ============================================================================
-    const models = [null, null, null];
-    
-    // MODEL 0: Human Stress 
-    SceneLoader.ImportMeshAsync("", "cortisol/assets/", "human_stress_v01.glb", scene).then((result) => {
-        const root = processLoadedModel(result, -12, "mesh_heart", 26);
-        root.position.y = 0.1;
-        root.setEnabled(false);
-        models[0] = root;
-    }).catch(err => console.error("Error loading Stress model:", err));
-
-    // MODEL 1: Craniofacial Morph Viewer 
-    SceneLoader.ImportMeshAsync("", "craniofacial/assets/", "anatomical-morph-viewer.glb", scene).then((result) => {
-        const root = processLoadedModel(result, -12, "mesh_head", 10);
-        root.setEnabled(false);
-        models[1] = root;
-    }).catch(err => console.error("Error loading Craniofacial model:", err));
-
-    // MODEL 2: Dron 
-    SceneLoader.ImportMeshAsync("", "windtunnel/assets/", "dron.glb", scene).then((result) => {
-        const root = processLoadedModel(result, -12, "fuselage",  1.0); 
-        root.position.x = 0.5;
-        root.setEnabled(false);
-        models[2] = root;
-    }).catch(err => console.error("Error loading Drone:", err));
-=======
-        // Prikazujemo prvi model (Heart)
-        if (models[0]) models[0].setEnabled(true);
-
-        console.log("All models loaded!");
->>>>>>> Stashed changes
-
+        
     } catch (err) {
         console.error("Error loading model:", err);
     }
