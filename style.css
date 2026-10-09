@@ -48,8 +48,6 @@ body {
     width: 100%; height: 100%; display: block; position: absolute; z-index: 1; outline: none; touch-action: none;
 }
 
-
-
 #floating-toolbar, #ui-toggle-btn, #mobile-top-bar { 
     display: none; 
 }

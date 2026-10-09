@@ -373,7 +373,7 @@ const createScene = function () {
                     } 
                     else if (idx === 1) {
                         m.rotationQuaternion = null;
-                        m.rotation.y = (time * 0.2) + (currentScroll * 2.0);
+                        m.rotation.y = (time * 0.4) + (currentScroll * 4.0);
                         m.rotation.x = Math.sin(time * 0.5) * 0.1;
                         m.rotation.z = 0;
                     } 
@@ -383,7 +383,7 @@ const createScene = function () {
                         const offsetY_degrees = 0;  
                         const offsetZ_degrees = -15;   
                         
-                        const scrollRotation = (time * 0.2) + (currentScroll * 2.0);
+                        const scrollRotation = (time * 0.4) + (currentScroll * 4.0);
                         
                         m.rotation.x = offsetX_degrees * (Math.PI / 180);
                         m.rotation.y = scrollRotation + (offsetY_degrees * (Math.PI / 180));

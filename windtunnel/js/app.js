@@ -51,9 +51,10 @@ if (wireframeBtn) {
     };
 }
 
-    // ============================================================================
-    // INK BACKGROUND SHADER (Gusto mastilo sa landing page-a, bez interakcije miša)
-    // ============================================================================
+// ============================================================================
+// INK BACKGROUND SHADER (Samo za Desktop)
+// ============================================================================
+if (!isMobileDevice) {
     BABYLON.Effect.ShadersStore["inkVertexShader"] = `
         precision highp float;
         attribute vec3 position;
@@ -62,7 +63,6 @@ if (wireframeBtn) {
         varying vec2 vUv;
 
         void main() {
-            // Vraćeno na stabilnih 1.0 radi očuvanja projekcione matrice geometrije
             gl_Position = worldViewProjection * vec4(position, 1.0);
             vUv = uv;
         }
@@ -72,7 +72,7 @@ if (wireframeBtn) {
         precision highp float;
         varying vec2 vUv;
         uniform float time;
-        uniform float speed; // NOVO: Primamo brzinu sa slajdera direktno iz JavaScript-a!
+        uniform float speed;
         
         float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 
@@ -94,11 +94,8 @@ if (wireframeBtn) {
 
         void main() {
             vec2 p = vUv * 2.0 - 1.0;
-            
-            // FIKS KONTRASTA: Smanjeno sa 4.0 na 1.8. Vrtlozi postaju krupniji, mekši i realističniji!
             vec2 scaledP = p * 1.8; 
             
-            // FIKS BRZINE: Množimo vreme sa speed uniformom. Kada slajder ode na max, dim leti!
             float dynamicTime = time * (1.0 + speed * 2.5);
             vec2 flowP = scaledP + vec2(0.0, dynamicTime * 0.4); 
             
@@ -111,25 +108,20 @@ if (wireframeBtn) {
             r.y = fbm(flowP + 2.0 * q + vec2(8.3, 2.8) + 0.05 * dynamicTime);
 
             float f = fbm(flowP + r);
-            
-            // MEKŠI PRELAZ: Proširen smoothstep opseg za ublažavanje prevelikog kontrasta
             float fluidContrast = smoothstep(0.2, 0.8, f);
-            
-            // FIKS MASKE CENTRA: Sužavamo mlaz na 0.45 širine ekrana da precizno gađa samo trup drona
             float centerMask = smoothstep(0.45, 0.0, abs(p.x)); 
-            
-            // ŠAH-MAT: Množenjem fluid dobija laserski tačan raspored samo u sredini ekrana!
             fluidContrast *= centerMask;
 
             vec3 color = mix(
                 vec3(0.002, 0.003, 0.008), 
-                vec3(0.02, 0.12, 0.38), // Blago utišan neon radi elegantnijeg kontrasta     
+                vec3(0.02, 0.12, 0.38),     
                 fluidContrast
             );
 
             gl_FragColor = vec4(color, 1.0);
         }
     `;
+}
 
 const createScene = async function () {
     const loadingScreen = document.getElementById('loading-screen');
@@ -180,36 +172,27 @@ const createScene = async function () {
     shadowGenerator.usePercentageCloserFiltering = true;
     shadowGenerator.setDarkness(0.5);
 
-    const isMobilePortrait = window.innerWidth < window.innerHeight;
-    
     // ============================================================================
-    // TRANSFORMATION HIERARCHY & CAMERA 
+    // TRANSFORMATION HIERARCHY & CAMERA (Identična za Desktop i Mobilne)
     // ============================================================================
     scene.collisionsEnabled = true;
 
     const cameraTarget = new BABYLON.Vector3(0, -0.3, -1); 
-    let initialRadius = 6.2;
+    const initialRadius = isMobileDevice ? 8.2 : 6.2; // Blago prilagođena udaljenost za staklo mobilnog
     const initialAlpha = 0; 
-    let initialBeta = 1.25;  
+    const initialBeta = 1.25;  
 
-    if (isMobilePortrait) {
-        cameraTarget.y = -1.5; 
-        cameraTarget.z = -1.15; // 1. CENTRIRANJE: Postavljeno na 0 kako bi dron bio tačno na sredini
-        initialRadius = 11.5; // 2. ODZUMIRAVANJE: Povećana udaljenost kamere da krila stanu u kadar
-        initialBeta = 1.05; // 3. PTIČJA PERSPEKTIVA: Smanjeno sa Math.PI / 2 (ravno) na 1.05 (blago odozgo)
-    }
-    
     const camera = new BABYLON.ArcRotateCamera("cam", initialAlpha, initialBeta, initialRadius, cameraTarget, scene);
     camera.attachControl(canvas, true);
     camera.minZ = 0.01; 
 
-    if (!isMobilePortrait) {
+    if (!isMobileDevice) {
         camera.targetScreenOffset = new BABYLON.Vector2(0.55, 0);
     }
 
-    if (isMobilePortrait) {
+    if (isMobileDevice) {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_VERTICAL_FIXED;
-        camera.fov = 0.85; // Malo povećan FOV kako bi se proširio vidni ugao na uskim ekranima
+        camera.fov = 0.90; 
     } else {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_HORIZONTAL_FIXED;
         camera.fov = 1.15;  
@@ -226,8 +209,7 @@ const createScene = async function () {
     camera.wheelPrecision = 60;
     
     camera.lowerRadiusLimit = 3.0;
-    // OSLOBOĐEN LIMIT: Kamera na desktopu može do 6.0, ali na mobilnom je puštamo do 12.0 da bi odzumiranje radilo
-    camera.upperRadiusLimit = isMobilePortrait ? 12.0 : 6.0; 
+    camera.upperRadiusLimit = isMobileDevice ? 12.0 : 6.0; 
 
     const camLight = new BABYLON.PointLight("camLight", camera.position, scene);
     camLight.parent = camera;
@@ -235,25 +217,29 @@ const createScene = async function () {
     camLight.diffuse = new BABYLON.Color3(0.9, 0.95, 1.0);
 
     // ============================================================================
-    // INK PLANE KREIRANJE
+    // INK PLANE KREIRANJE (Samo za Desktop)
     // ============================================================================
-    const inkPlane = BABYLON.MeshBuilder.CreatePlane("inkPlane", { size: 150 }, scene);
-    inkPlane.parent = camera; 
-    inkPlane.position.z = 40; 
-    inkPlane.renderingGroupId = 0; 
-    inkPlane.isPickable = false; 
-    
-    const inkMat = new BABYLON.ShaderMaterial("inkMat", scene, {
-        vertex: "ink",
-        fragment: "ink",
-    }, {
-        attributes: ["position", "uv"],
-        uniforms: ["worldViewProjection", "time", "mixLevel"]
-    });
-    inkMat.backFaceCulling = false;
-    inkMat.disableLighting = true;
-    inkMat.depthFunction = BABYLON.Engine.ALWAYS;
-    inkPlane.material = inkMat;
+    let inkMat = null;
+
+    if (!isMobileDevice) {
+        const inkPlane = BABYLON.MeshBuilder.CreatePlane("inkPlane", { size: 150 }, scene);
+        inkPlane.parent = camera; 
+        inkPlane.position.z = 40; 
+        inkPlane.renderingGroupId = 0; 
+        inkPlane.isPickable = false; 
+        
+        inkMat = new BABYLON.ShaderMaterial("inkMat", scene, {
+            vertex: "ink",
+            fragment: "ink",
+        }, {
+            attributes: ["position", "uv"],
+            uniforms: ["worldViewProjection", "time", "mixLevel"]
+        });
+        inkMat.backFaceCulling = false;
+        inkMat.disableLighting = true;
+        inkMat.depthFunction = BABYLON.Engine.ALWAYS;
+        inkPlane.material = inkMat;
+    }
 
     // ============================================================================
     // DRONE 
@@ -272,22 +258,16 @@ const createScene = async function () {
             child.material.lightingEnabled = true;
             child.material.environmentTexture = scene.environmentTexture;
         }
-         child.renderingGroupId = 1; 
+        child.renderingGroupId = 1; 
     });
  
     scene.materials.forEach((mat) => {
         if (mat instanceof BABYLON.PBRMaterial) {
-            
             mat.emissiveColor = new BABYLON.Color3(1.0, 1.0, 1.0); 
-            
             mat.emissiveIntensity = 6.5; 
-
             mat.useEmissiveAsIllumination = true;
-
             mat.environmentTexture = scene.environmentTexture;
             mat.lightingEnabled = true;
-            
-            console.log(`Glavni PBR materijal drona [${mat.name}] uspešno konfigurisan sa emisionom mapom.`);
         }
     });
 
@@ -353,8 +333,8 @@ const createScene = async function () {
     customMesh.setVerticesData("randomOffset", randomOffsets, false, 3);
     customMesh.setVerticesData("particleId", particleIds, false, 1);
 
-// ============================================================================
-    // HIGH-PERFORMANCE CUSTOM GLSL VERTEX SHADER (Fiks za nestajanje partikala)
+    // ============================================================================
+    // HIGH-PERFORMANCE CUSTOM GLSL VERTEX SHADER
     // ============================================================================
     
     BABYLON.Effect.ShadersStore["gpuParticleVertexShader"] = `
@@ -452,7 +432,6 @@ const createScene = async function () {
             float speedFade = mix(0.4, 0.18, uSlider); 
             float baseAlpha = clamp(alpha * speedFade, minBaseAlpha * (1.0 - uSlider * 0.4), 0.9); 
 
-            // Sitna, ukusna randomizacija
             float randSizeMultiplier = mix(0.7, 1.1, randomOffset.y);
             baseAlpha *= mix(0.4, 1.0, randomOffset.z);
 
@@ -471,7 +450,6 @@ const createScene = async function () {
                 finalColor = mix(finalColor, hitRed, proximityFactor);
                 
                 baseAlpha = mix(baseAlpha, 1.0, pressure);
-                // Vrlo malo uveličanje (maksimum 20%) pri dodiru
                 randSizeMultiplier *= (1.0 + pressure * 0.2); 
             }
 
@@ -484,7 +462,6 @@ const createScene = async function () {
             vColor = vec4(finalColor, baseAlpha);
             gl_Position = worldViewProjection * worldPos;
             
-            // FIKS: Zaštita koja sprečava render engine da ugasi partikle manje od 1 piksela
             float finalSize = particleSize * randSizeMultiplier * (1.0 - (life * life));
             gl_PointSize = max(finalSize, 1.0);
         }
@@ -527,9 +504,9 @@ const createScene = async function () {
     
     shaderMaterial.pointsCloud = true;
     shaderMaterial.pointSize = CONFIG.particleSize;
-    shaderMaterial.alphaMode = BABYLON.Engine.ALPHA_ADD; // FIKS: Additive blend pojačava sjaj sudara!
+    shaderMaterial.alphaMode = BABYLON.Engine.ALPHA_ADD; 
     shaderMaterial.backFaceCulling = false;
-    shaderMaterial.disableDepthWrite = true; // Sprečava Z-fighting kod gustih sudara
+    shaderMaterial.disableDepthWrite = true; 
     customMesh.renderingGroupId = 1;
     customMesh.material = shaderMaterial;
     
@@ -551,7 +528,6 @@ const createScene = async function () {
             shaderMaterial.setVector3("fusPos", Fuselage.getAbsolutePosition());
         }
         
-        // FIKS: Akumuliranje faze (Phase) umesto množenja apsolutnog vremena
         let currentRealSpeed = CONFIG.baseSpeed + (currentMix * (CONFIG.turboSpeed - CONFIG.baseSpeed));
         particlePhase += dt * currentRealSpeed * CONFIG.flowDirection * 0.05;
         
@@ -559,7 +535,7 @@ const createScene = async function () {
         shaderMaterial.setFloat("uPhase", particlePhase);
         shaderMaterial.setFloat("uSlider", currentMix);
         
-        // Ažuriranje Ink Pozadine
+        // Ažuriranje Ink Pozadine samo ako postoji (na desktopu)
         if (inkMat) {
             inkMat.setFloat("time", elapsedTime);
             inkMat.setFloat("mixLevel", currentMix);
@@ -572,7 +548,7 @@ const createScene = async function () {
         let responsiveScale;
 
         if (window.innerWidth < 768) {
-            responsiveScale = (1.0 / hardwareDpr) * 0.7; // Malo krupnije na telefonu
+            responsiveScale = (1.0 / hardwareDpr) * 0.7; 
         } else if (window.innerWidth >= 768 && window.innerWidth < 1200) {
             responsiveScale = (1.0 / hardwareDpr) * 1.8; 
         } else {
