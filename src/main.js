@@ -251,11 +251,37 @@ const createScene = function () {
     let trenutniKliknutiModel = null;
     
     window.addEventListener("wheel", (e) => {
-        // Blokiramo skrol ukoliko smo ušli u model
         if (!interakcijaUToku) {
             targetScroll += e.deltaY * 0.004; 
         }
     });
+
+        let touchStartY = 0;
+
+    window.addEventListener("touchstart", (e) => {
+        if (e.touches && e.touches.length > 0) {
+            touchStartY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+
+    window.addEventListener("touchmove", (e) => {
+        // Okidač koji meko sklanja [SCROLL_DOWN] natpis na dnu ekrana
+        if (typeof handleFirstScroll === "function") {
+            handleFirstScroll(); 
+        }
+        
+        if (!interakcijaUToku && e.touches && e.touches.length > 0) {
+            let currentTouchY = e.touches[0].clientY;
+            let touchDeltaY = touchStartY - currentTouchY; // Proračun hoda palca po ekranu
+            
+            // Emuliramo pokret točkića: punimo targetScroll srazmerno kretanju prsta
+            // (0.012 je proračunat mobilni koeficijent za savršen, gladak odziv)
+            targetScroll += touchDeltaY * 0.012; 
+            
+            // Ažuriramo startnu poziciju za sledeći milisekundni frejm
+            touchStartY = currentTouchY; 
+        }
+    }, { passive: true });
     
     // ============================================================================
     // 7.5 HOVER I KLIK NA MODEL - PROMJENA KURSORA I DIREKTAN ULAZAK
