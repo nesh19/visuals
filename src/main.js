@@ -182,7 +182,6 @@ const models = [null, null, null];
         root2.setEnabled(false);
         models[2] = root2;
 
-<<<<<<< Updated upstream
     // ============================================================================
     // PIPELINE ZA UČITAVANJE ASINKRONIH GEOMETRIJSKIH JEDINICA
     // ============================================================================
@@ -210,12 +209,12 @@ const models = [null, null, null];
         root.setEnabled(false);
         models[2] = root;
     }).catch(err => console.error("Error loading Drone:", err));
-=======
+
         // Prikazujemo prvi model (Heart)
         if (models[0]) models[0].setEnabled(true);
 
         console.log("All models loaded!");
->>>>>>> Stashed changes
+
 
     } catch (err) {
         console.error("Error loading model:", err);
