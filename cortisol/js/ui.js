@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const typeBody = document.getElementById("type-body");
     
     if (typeBody) {
-        typeBody.innerHTML = "CONCEPT: REAL-TIME BIOMETRIC CARDIOVASCULAR STRESS ANALYSIS.<br>TECH SOLUTIONS: MODELING INTERACTIVE PROCEDURAL DEFORMATIONS SYNCED WITH PROCEDURAL PARAMETRIC EMISSIVE LUMINANCE GRADIENTS.";
+        typeBody.innerHTML = "CONCEPT: INTERACTIVE SIMULATION OF THE HPA AXIS BIOLOGICAL CASCADE.<br>TECH SOLUTIONS: DYNAMIC PBR MATERIAL OVERRIDES, PROCEDURAL EMISSION MASKING, AND A DETERMINISTIC TIMELINE STATE-MACHINE.";
         void typeBody.offsetWidth;
         requestAnimationFrame(() => {
             setTimeout(() => {

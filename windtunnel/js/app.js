@@ -216,8 +216,8 @@ const createScene = async function () {
     camera.inertialPanningY = 0;
     camera.wheelPrecision = 60;
     
-    camera.lowerRadiusLimit = 3.0;
-    camera.upperRadiusLimit = isMobileDevice ? 11 : 6.0; 
+    camera.lowerRadiusLimit = 5.0;
+    camera.upperRadiusLimit = isMobileDevice ? 9 : 6.0; 
 
     const camLight = new BABYLON.PointLight("camLight", camera.position, scene);
     camLight.parent = camera;

@@ -106,7 +106,7 @@ body {
 
 #scroll-guide.scroll-disappear {
     opacity: 0 !important;
-    transform: translate(-50%, 20px) !important; /* Meko klizi naniže kroz pod ekrana monitora */
+    transform: translate(-50%, 20px) !important;
 }
 
 #left-container { 
