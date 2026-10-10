@@ -172,19 +172,25 @@ const createScene = async function () {
     shadowGenerator.usePercentageCloserFiltering = true;
     shadowGenerator.setDarkness(0.5);
 
-    // ============================================================================
-    // TRANSFORMATION HIERARCHY & CAMERA (Identična za Desktop i Mobilne)
+// ============================================================================
+    // TRANSFORMATION HIERARCHY & CAMERA
     // ============================================================================
     scene.collisionsEnabled = true;
 
     const cameraTarget = new BABYLON.Vector3(0, -0.3, -1); 
-    if (isMobileDevice) {
-        cameraTarget.y = -1.5; 
-        cameraTarget.z = -1.15;
-    }
-    const initialRadius = isMobileDevice ? 8.2 : 6.2; // Blago prilagođena udaljenost za staklo mobilnog
+    let initialRadius = 6.2;
     const initialAlpha = 0; 
-    const initialBeta = 1.25;  
+    let initialBeta = 1.25;  
+
+    // Vraćeni originalni parametri za mobilni prikaz
+    if (isMobileDevice) {
+        cameraTarget.y = -1.5;   // Spušta metu (dron se pomera više ka vrhu ekrana)
+        cameraTarget.z = -1.15;  // Podešavanje dubine
+        // cameraTarget.x = -0.5; // Otkomentariši i prilagodi ako želiš i pomak po X osi
+        
+        initialRadius = 11.5;    // Veća udaljenost da cela krila drona stanu u kadar
+        initialBeta = 1.05;      // Blaga ptičja perspektiva (ugao odozgo)
+    }
 
     const camera = new BABYLON.ArcRotateCamera("cam", initialAlpha, initialBeta, initialRadius, cameraTarget, scene);
     camera.attachControl(canvas, true);
@@ -196,7 +202,7 @@ const createScene = async function () {
 
     if (isMobileDevice) {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_VERTICAL_FIXED;
-        camera.fov = 0.90; 
+        camera.fov = 0.85; 
     } else {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_HORIZONTAL_FIXED;
         camera.fov = 1.15;  
