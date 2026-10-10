@@ -31,17 +31,17 @@
         </div>
     </div>
 
-    <!-- OVO JE TAJ KONTEJNER: U HTML-u ostaje isti zbog Desktopa, u CSS-u mu gasimo "Kavez" -->
+    <!-- LEFT CONTAINER -->
     <div id="left-container">
         
         <a href="../index.html" class="tech-link mobile-hide" style="display: inline-block; margin-bottom: 40px; font-size: 0.85rem; letter-spacing: 1px; text-decoration: none; opacity: 0.7;">
             [BACK]
         </a>
 
-        <!-- SEKCIJA 1: STATISTIKA I SFERA -->
+        <!-- STATS AND SPHERE -->
         <div id="panel-stats" class="panel-box tech-text">
                     
-                    <!-- Statistika (Sada ima class="mobile-popover" za mobilni prikaz) -->
+                    <!-- Statis -->
                     <div id="stats-panel" class="mobile-popover" style="display: flex; flex-direction: column; gap: 6px;">
                         <strong class="mobile-hide">STATISTICS</strong>
                         <div>FPS: <span id="fps" class="stat-val">0</span></div>
@@ -50,7 +50,7 @@
                         <div>Total Size: <span id="fileSize" class="stat-val">Calculating...</span></div>
                     </div>
                     
-                    <!-- Sfera je sada potpuno izdvojena kao poseban element -->
+                    <!-- Sphere -->
                     <div id="wireframe-btn" class="geometry-trigger" style="cursor: pointer; pointer-events: auto; width: fit-content;">
                         <div class="wireframe-sphere-mesh">
                             <div class="sphere-ring ring-h"></div>
@@ -60,7 +60,7 @@
                     </div>
                 </div>
 
-        <!-- SEKCIJA 2: SLAJDERI -->
+        <!-- SLIDERS -->
         <div id="panel-sliders" class="panel-box" style="margin-top: 50px; margin-bottom: 40px;">
             <div id="face-controls" class="panel-section active">
                 <div class="slider-group" style="margin-top: 0;">
@@ -80,8 +80,8 @@
             </div>
         </div>
 
-        <!-- SEKCIJA 3: INFO TEKST -->
-        <div id="info-panel" class="project-metadata-log mobile-popover" style="opacity: 0.85; font-size: 0.75rem; line-height: 1.6; color: var(--dim-blue); margin-top: 30px;">
+        <!-- INFO PANEL -->
+        <div id="info-panel" class="project-metadata-log mobile-popover">
             <span id="type-body"></span>
         </div>
 

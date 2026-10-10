@@ -14,14 +14,12 @@ if (wireframeBtn) {
     wireframeBtn.onclick = () => {
         isWireframe = !isWireframe;
         
-        // Tvoja originalna logika za boju i ivice
         wireframeBtn.style.color = isWireframe ? "#ffffff" : "#aaa";
         wireframeBtn.style.borderColor = isWireframe ? "#ffffff" : "rgba(255,255,255,0.1)";
         
         if (currentScene) {
             // Traverse scene graph hierarchy to toggle structural rendering topologies
             currentScene.materials.forEach(mat => { 
-                // Ignorišemo inkMat materijal pozadine kako bi fluid ostao tečan i u žičanom režimu
                 if (mat && mat.name !== "inkMat") mat.wireframe = isWireframe; 
             });
         }
@@ -46,13 +44,11 @@ const initSimulation = async function () {
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-    // Establish production photographic tone grading parameters
     scene.imageProcessingConfiguration.toneMappingEnabled = true;
     scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
     scene.imageProcessingConfiguration.exposure = 1.6;
     scene.imageProcessingConfiguration.contrast = 1;
 
-    // Initialize camera transformation vectors with nearplane safety clipping limits
     const camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2, 5, BABYLON.Vector3.Zero(), scene);
     camera.attachControl(canvas, true);
     camera.inertia = 0.8;                
@@ -72,11 +68,9 @@ const initSimulation = async function () {
     camera.targetScreenOffset = new BABYLON.Vector2(0, 0.1); 
     }
 
-    // Bind pre-filtered environmental radiance textures to manage linear PBR specular reflections
     scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData(`https://assets.babylonjs.com/environments/studio.env`, scene);
     scene.environmentIntensity = 1.0;
 
-    // Structural luminance configurations driving the anatomical scene context
     const extraLight = new BABYLON.HemisphericLight("extraLight", new BABYLON.Vector3(0, 1, 0), scene);
     extraLight.intensity = 0.5;
     extraLight.groundColor = new BABYLON.Color3(0.05, 0.05, 0.05);
@@ -111,10 +105,8 @@ const initSimulation = async function () {
                 framingBehavior.framingTime = 0;
                 framingBehavior.elevationReturnTime = -1;
                 if (window.innerWidth <= 1366) {
-                    // Zum za mobilne uređaje (manji broj = bliže ekranu)
                     framingBehavior.radiusScale = 0.75; 
                 } else {
-                    // Zum za desktop (1.0 je standardna udaljenost)
                     framingBehavior.radiusScale = 1.0; 
                 }
                 framingBehavior.zoomOnMeshesHierarchy(scene.meshes);
@@ -258,6 +250,15 @@ const initSimulation = async function () {
         let maxReachedValue = 0; 
         let time = 0;
         let eyeTarget = new BABYLON.Vector3(0, 0, -10);
+        let pointerX = engine.getRenderWidth() / 2;
+        let pointerY = engine.getRenderHeight() / 2;
+
+        scene.onPointerObservable.add((pi) => {
+            if (pi.type === BABYLON.PointerEventTypes.POINTERMOVE || pi.type === BABYLON.PointerEventTypes.POINTERDOWN) {
+                pointerX = scene.pointerX;
+                pointerY = scene.pointerY;
+            }
+        });
 
         if (slider) {
             slider.oninput = (e) => {
@@ -328,7 +329,7 @@ const initSimulation = async function () {
             if (pi.type === BABYLON.PointerEventTypes.POINTERMOVE) {
                 let x = (scene.pointerX / engine.getRenderWidth()) * 2 - 1;
                 let y = -(scene.pointerY / engine.getRenderHeight()) * 2 + 1;
-                eyeTarget.set(x * 3, (y * 3) + 1.5, 10);
+                eyeTarget.set(x * 5, (y * 5) + 1.5, 10);
             }
         });
         
@@ -347,11 +348,14 @@ const initSimulation = async function () {
             glowLayer.intensity = Math.max(0.6, stressLevel * 1.5); 
 
             // Execute spatial tracking vectors for eyeball hardware constraints
+            let x = (pointerX / engine.getRenderWidth()) * 2 - 1;
+            let y = -(pointerY / engine.getRenderHeight()) * 2 + 1;
+            eyeTarget.set(x * 5, (y * 5) + 1.5, 10);
+
             let eyeMesh = scene.getMeshByName("geo_eye");
             if (eyeMesh) {
                 eyeMesh.lookAt(eyeTarget); 
                 if (eyeMesh.morphTargetManager) {
-                    // Update pupillary scale target values directly via input stress thresholds
                     let pupilTarget = eyeMesh.morphTargetManager.getTargetByName("pupil_dilate") || eyeMesh.morphTargetManager.getTargetByName("stress_pupil");
                     if (pupilTarget) pupilTarget.influence = stressLevel; 
                 }

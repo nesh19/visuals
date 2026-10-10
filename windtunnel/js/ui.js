@@ -1,6 +1,6 @@
-document.addEventListener("DOMContentLoaded", () => {
+function initUI() {
     // ============================================================================
-    // 1. MOBILNI UI TOGGLE
+    // 1. MOBILE UI TOGGLE
     // ============================================================================
     const uiToggleBtn = document.getElementById("ui-toggle-btn");
     const leftContainer = document.getElementById("left-container");
@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================================
-    // NOVO: LOGIKA ZA MOBILNE POP-UP PANELE (Cortisol standard)
+    // MOBILNE POP-UP PANEL LOGIC
     // ============================================================================
     const infoBtn = document.getElementById("mobile-info-btn");
     const statsBtn = document.getElementById("mobile-stats-btn");
@@ -31,7 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const statsPanel = document.getElementById("stats-panel");
 
     if (infoBtn && statsBtn && infoPanel && statsPanel) {
-        // Otvaranje/Zatvaranje INFO panela
         infoBtn.addEventListener("click", () => {
             if (statsPanel.classList.contains("mobile-open")) {
                 statsPanel.classList.remove("mobile-open");
@@ -41,7 +40,6 @@ document.addEventListener("DOMContentLoaded", () => {
             infoBtn.classList.toggle("active");
         });
 
-        // Otvaranje/Zatvaranje STATS panela
         statsBtn.addEventListener("click", () => {
             if (infoPanel.classList.contains("mobile-open")) {
                 infoPanel.classList.remove("mobile-open");
@@ -53,44 +51,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // ============================================================================
-    // 2. TELETYPE EFEKAT (Aerodynamics Log)
+    // 2. FADE-IN TEXT INJECTOR 
     // ============================================================================
     const typeBody = document.getElementById("type-body");
-    const loadingScreen = document.getElementById("loading-screen");
-
-    const textToType = "CONCEPT: REAL-TIME AERODYNAMIC DRONE SIMULATION.\\nTECH SOLUTIONS: ENGINEERED IN BABYLON.JS UTILIZING GPU PARTICLE SYSTEMS, DYNAMIC WIND VELOCITY PARAMETERS, AND INTERACTIVE FLOW REGIME TRANSITIONS.";
     
-    let isTyping = false;
-
-    function pokreniTeletypeKucanje() {
-        if (!typeBody || isTyping) return;
-        isTyping = true;
-        
-        let index = 0; 
-        typeBody.innerHTML = ""; 
-        
-        function typeChar() {
-            if (index < textToType.length) {
-                let char = textToType.charAt(index);
-                
-                if (char === '\\' && textToType.charAt(index + 1) === 'n') {
-                    typeBody.innerHTML += "<br>"; 
-                    index += 2; 
-                } else {
-                    typeBody.innerHTML += char;
-                    index++;
-                }
-                
-                setTimeout(typeChar, Math.random() * 30 + 15);
-            } else {
-                isTyping = false; 
-            }
-        }
-        typeChar();
+    if (typeBody) {
+        typeBody.innerHTML = "CONCEPT: REAL-TIME AERODYNAMIC DRONE SIMULATION.<br>TECH SOLUTIONS: ENGINEERED IN BABYLON.JS UTILIZING GPU PARTICLE SYSTEMS, DYNAMIC WIND VELOCITY PARAMETERS, AND INTERACTIVE FLOW REGIME TRANSITIONS.";
+        void typeBody.offsetWidth;
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                typeBody.classList.add("cinema-fade-active");
+            }, 80); 
+        });
     }
 
     // ============================================================================
-    // 3. WIREFRAME SPHERE KLASA
+    // 3. WIREFRAME SPHERE CLASS
     // ============================================================================
     const wireframeButton = document.getElementById("wireframe-btn");
     if (wireframeButton) {
@@ -98,21 +74,10 @@ document.addEventListener("DOMContentLoaded", () => {
             wireframeButton.classList.toggle("active");
         });
     }
+}
 
-    // ============================================================================
-    // 4. STRIPOVANJE LOADING PARAVANA
-    // ============================================================================
-    if (loadingScreen) {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === "style" && loadingScreen.style.display === "none") {
-                    setTimeout(pokreniTeletypeKucanje, 500);
-                    observer.disconnect(); 
-                }
-            });
-        });
-        observer.observe(loadingScreen, { attributes: true });
-    } else {
-        setTimeout(pokreniTeletypeKucanje, 1000);
-    }
-});
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initUI);
+} else {
+    initUI();
+}

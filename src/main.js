@@ -11,17 +11,15 @@ const {
 import { inkVertexShader, inkFragmentShader } from "./shaders/inkShader.js";
 import { haloVertexShader, haloFragmentShader } from "./shaders/haloShader.js";
 
-// Init canvas and engine
 const canvas = document.getElementById("renderCanvas");
 const engine = new Engine(canvas, true, { antialias: true });
 
 const createScene = function () {
     const scene = new Scene(engine);
     
-    // Crna pozadina
     scene.clearColor = new Color4(0.0, 0.0, 0.0, 1.0); 
     
-    // ACES Tone Mapping podešavanje za bioskopski kvalitet
+    // ACES 
     scene.imageProcessingConfiguration.toneMappingEnabled = true;
     scene.imageProcessingConfiguration.toneMappingType = window.BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
 
@@ -43,7 +41,7 @@ const createScene = function () {
     updateCameraFOV();
 
     // ============================================================================
-    // SISTEM OSVJETLJENJA I OKRUŽENJA (PBR HDRI + Camera Light)
+    // PBR HDRI + Camera Light
     // ============================================================================
     const hdrTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("./assets/abstract2.env", 
     scene
@@ -137,9 +135,8 @@ const createScene = function () {
     baseGlassMat.iridescence.intensity = 1.0;
     baseGlassMat.iridescence.indexOfRefraction = 0.9;
 
-
     // ============================================================================
-    // POPRAVLJENO SEKVENCIJALNO UČITAVANJE
+    // SEQUENTIAL_PIPELINE: CHAINED ASYNCHRONOUS ASSET LAZY-LOADING REGISTER
     // ============================================================================
 const models = [null, null, null];
 
@@ -153,7 +150,7 @@ const models = [null, null, null];
         res0.meshes.forEach(m => {
             if (m.getTotalVertices() > 0) m.material = targetMat;
         });
-        root0.scaling = new BABYLON.Vector3(3, 3, 3); // <-- Dodato skaliranje
+        root0.scaling = new BABYLON.Vector3(3, 3, 3); 
         root0.setEnabled(false);
         models[0] = root0;
 
@@ -165,7 +162,7 @@ const models = [null, null, null];
         res1.meshes.forEach(m => {
             if (m.getTotalVertices() > 0) m.material = targetMat;
         });
-        root1.scaling = new BABYLON.Vector3(2.8,2.8, 2.8); // <-- Dodato skaliranje
+        root1.scaling = new BABYLON.Vector3(2.8,2.8, 2.8); 
         root1.setEnabled(false);
         models[1] = root1;
 
@@ -177,12 +174,11 @@ const models = [null, null, null];
         res2.meshes.forEach(m => {
             if (m.getTotalVertices() > 0) m.material = targetMat;
         });
-        root2.scaling = new BABYLON.Vector3(2.25, 2.25, 2.25); // <-- Dodato skaliranje
+        root2.scaling = new BABYLON.Vector3(2.25, 2.25, 2.25); 
         root2.position.x = 1;
         root2.setEnabled(false);
         models[2] = root2;
 
-        // Prikazujemo prvi model (Heart)
         if (models[0]) models[0].setEnabled(true);
 
         console.log("All models loaded!");
@@ -192,7 +188,7 @@ const models = [null, null, null];
     }
 })();
     // ============================================================================
-    // 7. INPUT SCROLL MECHANICS & TIMING CONTEXT REGISTER
+    // INPUT SCROLL MECHANICS & TIMING CONTEXT REGISTER
     // ============================================================================
     let time = 0;
     const resolution = new Vector2(engine.getRenderWidth(), engine.getRenderHeight());
@@ -205,7 +201,7 @@ const models = [null, null, null];
     let currentScroll = 0;
     let activeModelIndex = 0;
     
-    // VARIJABLE ZA KONTROLU UI STANJA
+    // STATE_MACHINE: INTERACTION CONTEXT & VIEWPORT UI REGISTERS
     let interakcijaUToku = false; 
     let originalnaSkala = null;
     let trenutniKliknutiModel = null;
@@ -227,16 +223,14 @@ const models = [null, null, null];
         window.addEventListener("touchmove", (e) => {
             if (!interakcijaUToku && e.touches.length === 1) {
                 const currentY = e.touches[0].clientY;
-                const deltaY = touchStartY - currentY; // Razlika u pikselima
+                const deltaY = touchStartY - currentY; // pixel difference
                 touchStartY = currentY;
                 
-                // Faktor 0.006 podešava osjetljivost skrola na dodir
-                targetScroll += deltaY * 0.006; 
+                targetScroll += deltaY * 0.006; // HARDWARE_SENSITIBILITY_MULTIPLIER
             }
         }, { passive: true });
 
     window.addEventListener("touchmove", (e) => {
-        // Okidač koji meko sklanja [SCROLL_DOWN] natpis na dnu ekrana
         if (typeof handleFirstScroll === "function") {
             handleFirstScroll(); 
         }
@@ -245,22 +239,18 @@ const models = [null, null, null];
             let currentTouchY = e.touches[0].clientY;
             let touchDeltaY = touchStartY - currentTouchY; // Proračun hoda palca po ekranu
             
-            // Emuliramo pokret točkića: punimo targetScroll srazmerno kretanju prsta
-            // (0.012 je proračunat mobilni koeficijent za savršen, gladak odziv)
             targetScroll += touchDeltaY * 0.012; 
-            
-            // Ažuriramo startnu poziciju za sledeći milisekundni frejm
+
             touchStartY = currentTouchY; 
         }
     }, { passive: true });
     
     // ============================================================================
-    // 7.5 HOVER I KLIK NA MODEL - PROMJENA KURSORA I DIREKTAN ULAZAK
+    // HOVER AND MODEL SELECTION
     // ============================================================================
     scene.onPointerObservable.add((pointerInfo) => {
         if (interakcijaUToku) return;
 
-        // 1. HOVER DETEKCIJA (Eksplicitan raycast pri pokretu miša)
         if (pointerInfo.type === window.BABYLON.PointerEventTypes.POINTERMOVE) {
             const pick = scene.pick(scene.pointerX, scene.pointerY, (mesh) => {
                 return mesh.isVisible && mesh.isEnabled() && mesh.isPickable;
@@ -273,7 +263,6 @@ const models = [null, null, null];
             }
         }
 
-        // 2. KLIK NA MODEL (Direktan ulazak u simulaciju)
         if (pointerInfo.type === window.BABYLON.PointerEventTypes.POINTERDOWN) {
             const pick = scene.pick(scene.pointerX, scene.pointerY, (mesh) => {
                 return mesh.isVisible && mesh.isEnabled() && mesh.isPickable;
@@ -295,7 +284,7 @@ const models = [null, null, null];
     });
     
     // ============================================================================
-    // 8. GRAPHICS PIPELINE & RENDERING LOOP STATE MACHINE
+    // GRAPHICS PIPELINE & RENDERING LOOP STATE MACHINE
     // ============================================================================
     scene.onBeforeRenderObservable.add(() => {
         time += engine.getDeltaTime() * 0.001; 
@@ -406,27 +395,24 @@ function handleFirstScroll() {
         hasScrolledOnce = true;
         
         if (scrollGuide) {
-            // Dodajemo CSS klasu koja pokreće meko sklanjanje naniže
             scrollGuide.classList.add("scroll-disappear");
             
-            // Potpuno brišemo element iz memorije nakon 800ms kada završi animaciju
             setTimeout(() => {
                 scrollGuide.remove();
             }, 800);
         }
         
-        // ISTOG TRENUTKA SKIDAMO OSLUŠKIVAČE DA RASTERETIMO PROCESOR
+        // GARBAGE_COLLECTION:UNREGISTERING RUNTIME EVENT LISTENERS TO PREVENT MEMORY LEAKS
         window.removeEventListener("wheel", handleFirstScroll);
         window.removeEventListener("touchmove", handleFirstScroll);
     }
 }
 
-// Kačimo ponovo detekciju na prozor pretraživača (uz passive: true za bolje performanse)
 window.addEventListener("wheel", handleFirstScroll, { passive: true });
 window.addEventListener("touchmove", handleFirstScroll, { passive: true });
 
 // ============================================================================
-// HARDWARE INITIALIZATION & RUNTIME EXECUTION PETLJA
+// HARDWARE INITIALIZATION & RUNTIME EXECUTION 
 // ============================================================================
 const scene = createScene();
 

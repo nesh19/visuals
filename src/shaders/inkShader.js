@@ -54,11 +54,11 @@ export const inkFragmentShader = `
             float age = float(i) / 9.0; 
             float weight = 1.0 - age; 
             
-            // Glava komete ostaje uska
+            // Head
             float gInt = exp(-mouseDist * (30.0 + age * 50.0)) * weight;
             glowInteraction += gInt;
 
-            // OSLOBOĐENI TALASI: Smanjeno sa 10.0 na 4.0 kako bi se talas širio dublje u prostor
+            // Waves
             float wInt = exp(-mouseDist * (16.0 + age * 1.0)) * weight;
             waveInteraction += wInt;
         }
@@ -68,7 +68,7 @@ export const inkFragmentShader = `
 
         vec2 scaledP = p * 3.0; 
         
-        // MORSKI TOK: Mastilo konstantno klizi dijagonalno
+        // Ink flow
         vec2 flowP = scaledP + vec2(time * 0.2, time * 0.2);
         
         vec2 q = vec2(0.0);
@@ -77,7 +77,7 @@ export const inkFragmentShader = `
 
         vec2 r = vec2(0.0);
         
-        // POJAČAN UDARAC: Snaga talasa podignuta na 18.0 za jaču distorziju prostora
+        // Waves distorsion
         r.x = fbm(flowP + 2.0 * q + vec2(1.7, 9.2) + 0.1 * time + waveInteraction * 18.0);
         r.y = fbm(flowP + 2.0 * q + vec2(8.3, 2.8) + 0.1 * time - waveInteraction * 18.0);
 
@@ -93,7 +93,7 @@ export const inkFragmentShader = `
 
         color += vec3(0.05, 0.25, 0.6) * glowInteraction * (f + 0.5);
         
-        // POJAČAN KONTRAST TALASA: Plava nijansa je posvijetljena da se jasno vidi trag
+        // Waves contrast
         color += vec3(0.02, 0.1, 0.3) * waveInteraction * fluidContrast;
 
         gl_FragColor = vec4(color, 1.0);

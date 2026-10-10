@@ -26,7 +26,7 @@ let currentMix = 0.0;
 const fanGroups = [];
 const brakeGroups = [];
 const invMat = new BABYLON.Matrix(); 
-let particlePhase = 0; // FIKS: Akumulator za tečnu brzinu partikala (sprečava skokove)
+let particlePhase = 0; 
 
 // ============================================================================
 // ENVIRONMENT OVERRIDES & RENDER CONFIGURATION REGISTER
@@ -52,15 +52,11 @@ if (wireframeBtn) {
 }
 
 // ============================================================================
-// INK BACKGROUND SHADER (Samo za Desktop)
+// INK BACKGROUND SHADER 
 // ============================================================================
-
+if (!isMobileDevice) {
     BABYLON.Effect.ShadersStore["inkVertexShader"] = `
-        #ifdef GL_FRAGMENT_PRECISION_HIGH
-            precision highp float;
-        #else
-            precision mediump float;
-        #endif
+        precision highp float;
         attribute vec3 position;
         attribute vec2 uv;
         uniform mat4 worldViewProjection;
@@ -73,11 +69,7 @@ if (wireframeBtn) {
     `;
 
     BABYLON.Effect.ShadersStore["inkFragmentShader"] = `
-        #ifdef GL_FRAGMENT_PRECISION_HIGH
-            precision highp float;
-        #else
-            precision mediump float;
-        #endif
+        precision highp float;
         varying vec2 vUv;
         uniform float time;
         uniform float speed;
@@ -129,7 +121,7 @@ if (wireframeBtn) {
             gl_FragColor = vec4(color, 1.0);
         }
     `;
-
+}
 
 const createScene = async function () {
     const loadingScreen = document.getElementById('loading-screen');
@@ -190,13 +182,12 @@ const createScene = async function () {
     const initialAlpha = 0; 
     let initialBeta = 1.25;  
 
-    // Vraćeni originalni parametri za mobilni prikaz
     if (isMobileDevice) {
-        cameraTarget.y = -1.5;   // Spušta metu (dron se pomera više ka vrhu ekrana)
-        cameraTarget.z = -1.15;  // Podešavanje dubine
+        cameraTarget.y = -1.5;   
+        cameraTarget.z = -1.15;  
         
-        initialRadius = 11.5;    // Veća udaljenost da cela krila drona stanu u kadar
-        initialBeta = 1.05;      // Blaga ptičja perspektiva (ugao odozgo)
+        initialRadius = 11;    
+        initialBeta = 1.05;      
     }
 
     const camera = new BABYLON.ArcRotateCamera("cam", initialAlpha, initialBeta, initialRadius, cameraTarget, scene);
@@ -209,7 +200,7 @@ const createScene = async function () {
 
     if (isMobileDevice) {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_VERTICAL_FIXED;
-        camera.fov = 0.82; 
+        camera.fov = 0.85; 
     } else {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_HORIZONTAL_FIXED;
         camera.fov = 1.15;  
@@ -226,7 +217,7 @@ const createScene = async function () {
     camera.wheelPrecision = 60;
     
     camera.lowerRadiusLimit = 3.0;
-    camera.upperRadiusLimit = isMobileDevice ? 11.5 : 6.0; 
+    camera.upperRadiusLimit = isMobileDevice ? 11 : 6.0; 
 
     const camLight = new BABYLON.PointLight("camLight", camera.position, scene);
     camLight.parent = camera;
@@ -234,7 +225,7 @@ const createScene = async function () {
     camLight.diffuse = new BABYLON.Color3(0.9, 0.95, 1.0);
 
     // ============================================================================
-    // INK PLANE KREIRANJE (Samo za Desktop)
+    // INK PLANE 
     // ============================================================================
     let inkMat = null;
 
@@ -351,7 +342,7 @@ const createScene = async function () {
     customMesh.setVerticesData("particleId", particleIds, false, 1);
 
     // ============================================================================
-    // HIGH-PERFORMANCE CUSTOM GLSL VERTEX SHADER
+    // CUSTOM GLSL VERTEX SHADER
     // ============================================================================
     
     BABYLON.Effect.ShadersStore["gpuParticleVertexShader"] = `
@@ -552,7 +543,7 @@ const createScene = async function () {
         shaderMaterial.setFloat("uPhase", particlePhase);
         shaderMaterial.setFloat("uSlider", currentMix);
         
-        // Ažuriranje Ink Pozadine samo ako postoji (na desktopu)
+        // Runtime update: re-calculating procedural ink shader uniforms (desktop)
         if (inkMat) {
             inkMat.setFloat("time", elapsedTime);
             inkMat.setFloat("mixLevel", currentMix);

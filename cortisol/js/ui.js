@@ -1,11 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // 1. NOVI TOP BAR SISTEM (Otvaranje I i S panela)
+    // ============================================================================
+    // 1. MOBILE UI TOGGLE & RESPONSIVE PANELS
+    // ============================================================================
     const mobileInfoBtn = document.getElementById("mobile-info-btn");
     const mobileStatsBtn = document.getElementById("mobile-stats-btn");
     const infoPanel = document.getElementById("info-panel");
     const statsPanel = document.getElementById("stats-panel");
 
-if (mobileInfoBtn && infoPanel) {
+    if (mobileInfoBtn && infoPanel) {
         mobileInfoBtn.addEventListener("click", () => {
             if (statsPanel && statsPanel.classList.contains("mobile-open")) {
                 statsPanel.classList.remove("mobile-open");
@@ -13,11 +15,6 @@ if (mobileInfoBtn && infoPanel) {
             }
             const isOpen = infoPanel.classList.toggle("mobile-open");
             mobileInfoBtn.classList.toggle("active", isOpen);
-
-            // NOVO: Svaki put kada se otvori panel, resetuj i pokreni kucanje!
-            if (isOpen) {
-                pokreniTeletypeKucanje();
-            }
         });
     }
 
@@ -32,56 +29,28 @@ if (mobileInfoBtn && infoPanel) {
         });
     }
 
-    // 2. TELETYPE EFEKAT ZA OPIS
+    // ============================================================================
+    // 2. FADE-IN TEXT INJECTOR
+    // ============================================================================
     const typeBody = document.getElementById("type-body");
-    const loadingScreen = document.getElementById("loading-screen");
-    const textToType = "CONCEPT: INTERACTIVE SIMULATION OF THE HPA AXIS BIOLOGICAL CASCADE.\\nTECH SOLUTIONS: ENGINEERED IN BABYLON.JS UTILIZING DYNAMIC PBR MATERIAL OVERRIDES, PROCEDURAL EMISSION MASKING, AND A DETERMINISTIC TIMELINE STATE-MACHINE.";
-    let isTyping = false;
-
-    function pokreniTeletypeKucanje() {
-        if (!typeBody || isTyping) return;
-        isTyping = true;
-        let index = 0; 
-        typeBody.innerHTML = ""; 
-        
-        function typeChar() {
-            if (index < textToType.length) {
-                let char = textToType.charAt(index);
-                if (char === '\\' && textToType.charAt(index + 1) === 'n') {
-                    typeBody.innerHTML += "<br>"; 
-                    index += 2; 
-                } else {
-                    typeBody.innerHTML += char;
-                    index++;
-                }
-                setTimeout(typeChar, Math.random() * 30 + 15);
-            } else {
-                isTyping = false; 
-            }
-        }
-        typeChar();
+    
+    if (typeBody) {
+        typeBody.innerHTML = "CONCEPT: REAL-TIME BIOMETRIC CARDIOVASCULAR STRESS ANALYSIS.<br>TECH SOLUTIONS: MODELING INTERACTIVE PROCEDURAL DEFORMATIONS SYNCED WITH PROCEDURAL PARAMETRIC EMISSIVE LUMINANCE GRADIENTS.";
+        void typeBody.offsetWidth;
+        requestAnimationFrame(() => {
+            setTimeout(() => {
+                typeBody.classList.add("cinema-fade-active");
+            }, 80); 
+        });
     }
 
-    // 3. SFERA AKTIVACIJA KLASA
+    // ============================================================================
+    // 3. WIREFRAME CONFIGURATION CONTROLS
+    // ============================================================================
     const wireframeButton = document.getElementById("wireframe-btn");
     if (wireframeButton) {
         wireframeButton.addEventListener("click", () => {
             wireframeButton.classList.toggle("active");
         });
-    }
-
-    // 4. STRIPOVANJE LOADING PARAVANA
-    if (loadingScreen) {
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === "style" && loadingScreen.style.display === "none") {
-                    setTimeout(pokreniTeletypeKucanje, 500);
-                    observer.disconnect(); 
-                }
-            });
-        });
-        observer.observe(loadingScreen, { attributes: true });
-    } else {
-        setTimeout(pokreniTeletypeKucanje, 1000);
     }
 });

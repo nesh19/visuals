@@ -71,7 +71,7 @@ export const haloFragmentShader = `
     }
 
     void main() {
-        // Remapiranje UV koordinata sa [0, 1] na [-1, 1] za polarnu matematiku
+        // Remapping UV [0, 1] na [-1, 1] 
         vec2 uv = vUv * 2.0 - 1.0;
         
         float ang = atan(uv.y, uv.x);

@@ -13,13 +13,11 @@ const wireframeBtn = document.getElementById("wireframe-btn");
 if (wireframeBtn) {
     wireframeBtn.onclick = () => {
         isWireframe = !isWireframe;
-        
-        // Zadržavamo originalnu logiku stilizovanja i prstena na sferi
+        i
         wireframeBtn.style.color = isWireframe ? "#ffffff" : "#aaa";
         wireframeBtn.style.borderColor = isWireframe ? "#ffffff" : "rgba(255,255,255,0.1)";
         
         if (currentScene) {
-            // Prolazimo kroz sve materijale scene i palimo žičanu topologiju
             currentScene.materials.forEach(mat => { 
                 if (mat) mat.wireframe = isWireframe; 
             });
@@ -45,13 +43,11 @@ const initSimulation = async function () {
     const scene = new BABYLON.Scene(engine);
     scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-    // Apply strict photographic tone grading properties
     scene.imageProcessingConfiguration.toneMappingEnabled = true;
     scene.imageProcessingConfiguration.toneMappingType = BABYLON.ImageProcessingConfiguration.TONEMAPPING_ACES;
     scene.imageProcessingConfiguration.exposure = 1.0;
     scene.imageProcessingConfiguration.contrast = 1;
 
-    // Construct perspective projection matrix with rigid safety boundaries
     const camera = new BABYLON.ArcRotateCamera("camera", 2.0, 1.5, 5, BABYLON.Vector3.Zero(), scene);
     camera.attachControl(canvas, true);
     camera.inertia = 0.8;                
@@ -69,7 +65,6 @@ const initSimulation = async function () {
     camera.targetScreenOffset = new BABYLON.Vector2(0, 0.08); 
     }
 
-    // Ingest pre-filtered radiance maps to calculate PBR surface equations
     scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData(`https://assets.babylonjs.com/environments/environmentSpecular.env`, scene);
     scene.environmentIntensity = 1.0;
 
@@ -98,12 +93,9 @@ const initSimulation = async function () {
                 framingBehavior.framingTime = 0;
                 framingBehavior.elevationReturnTime = -1;
 
-                // FIKS: Razdvajamo logiku zuma za Desktop i Mobile
                 if (window.innerWidth <= 1366) {
-                    // Zum za mobilne uređaje (manji broj = bliže ekranu)
                     framingBehavior.radiusScale = 0.85; 
                 } else {
-                    // Zum za desktop (1.0 je standardna udaljenost)
                     framingBehavior.radiusScale = 1.0; 
                 }
                 

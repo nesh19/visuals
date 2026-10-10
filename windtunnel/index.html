@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="../style.css">
 
     <style>
-        /* ZAŠTITA DESKTOP LAYOUTA: Ovi stilovi se primjenjuju samo na velikim ekranima */
+        /* DESKTOP LAYOUT */
         @media (min-width: 1367px) {
             #left-container {
                 overflow-y: auto !important;
@@ -43,7 +43,7 @@
     </div>
     <button id="ui-toggle-btn">HIDE UI</button>
 
-    <!-- MOBILNI GORNJI MENI (Dodan po uzoru na Cortisol) -->
+    <!-- MOBILE TOP MENU BAR -->
     <div id="mobile-top-bar"> 
         <div class="mobile-actions">
             <a href="../index.html" class="mobile-nav-btn" id="mobile-back-btn">[BACK]</a>
@@ -52,18 +52,18 @@
         </div>
     </div>
 
-    <!-- GLAVNI LEVI KONTEJNER (Dodan drone-layout za moguće CSS korekcije) -->
+    <!-- LEFT CONTAINER) -->
     <div id="left-container" class="drone-layout">
         
-        <!-- Povratak nazad -->
+        <!-- BACK -->
         <a href="../index.html" class="tech-link mobile-hide" style="display: inline-block; margin-bottom: 40px; font-size: 0.85rem; letter-spacing: 1px; text-decoration: none; opacity: 0.7;">
             [BACK]
         </a>
 
-        <!-- STATISTIKA I SFERA -->
+        <!-- STATS AND SPHERE -->
         <div id="panel-stats" class="panel-box tech-text">
             
-            <!-- STATS PANEL (Pretvoren u mobilni popover) -->
+            <!-- STATS PANEL (mobile popover) -->
             <div id="stats-panel" class="mobile-popover" style="display: flex; flex-direction: column; gap: 6px;">
                 <strong class="mobile-hide">STATISTICS</strong>
                 <div>FPS: <span id="fps" class="stat-val">0</span></div>
@@ -72,7 +72,7 @@
                 <div>Total Size: <span id="fileSize" class="stat-val">Calculating...</span></div>
             </div>
             
-            <!-- SFERA -->
+            <!-- SPHERE -->
             <div id="wireframe-btn" class="geometry-trigger" style="margin-top: 24px; margin-bottom: 10px; cursor: pointer; pointer-events: auto; width: fit-content;">
                 <div class="wireframe-sphere-mesh">
                     <div class="sphere-ring ring-h"></div>
@@ -82,11 +82,11 @@
             </div>
         </div> 
 
-       <!-- AERODINAMIKA I SLAJDER -->
+       <!-- SLIDER -->
         <div id="panel-sliders" class="panel-box">
             <div id="aero-controls" class="panel-section active">
                 
-                <!-- AERO VRIJEDNOSTI (Ostavljeno vidljivo iznad slajdera) -->
+                <!-- AERO VALUES -->
                 <div style="font-family: 'Roboto Mono', monospace; font-size: 0.72rem; color: var(--dim-blue); margin-bottom: 25px; line-height: 1.8; letter-spacing: 1px;">
                     <div style="display: flex; justify-content: space-between;">
                         <span>WIND SPEED:</span> 
@@ -106,7 +106,7 @@
                     </div>
                 </div>
 
-                <!-- SLAJDER (Margina teksta prilagođena Cortisol primjeru) -->
+                <!-- SLIDER -->
                 <div class="slider-group" style="margin-top: 0; position: relative;">
                     <div class="slider-label" style="justify-content: flex-start; color: var(--danger-red); letter-spacing: 1px; font-weight: bold; margin-bottom: 5px;">ACTIVE AERODYNAMICS</div>
                     <input type="range" id="brakeSlider" class="stress-slider" min="0" max="1" step="0.01" value="0" style="position: relative; z-index: 2;">
@@ -115,8 +115,8 @@
             </div>
         </div>
 
-        <!-- INFO PANEL & TELETYPE (Pretvoren u mobilni popover) -->
-        <div id="info-panel" class="project-metadata-log mobile-popover" style="opacity: 0.85; font-size: 0.75rem; line-height: 1.6; color: var(--dim-blue);">
+        <!-- INFO PANEL -->
+        <div id="info-panel" class="project-metadata-log mobile-popover">
             <span id="type-body"></span>
         </div>
 
