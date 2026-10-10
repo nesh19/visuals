@@ -12,7 +12,7 @@ const isMobileDevice = window.innerWidth < 768;
 
 const CONFIG = {
     particleCount: isMobileDevice ? 8000 : 60000,         
-    particleSize: 0.05,                 
+    particleSize: 0.075,                 
     beamRadius: 3.5,                 
     tunnelLength: 8.0,
     baseSpeed: 18.0,
@@ -54,9 +54,13 @@ if (wireframeBtn) {
 // ============================================================================
 // INK BACKGROUND SHADER (Samo za Desktop)
 // ============================================================================
-if (!isMobileDevice) {
+
     BABYLON.Effect.ShadersStore["inkVertexShader"] = `
-        precision highp float;
+        #ifdef GL_FRAGMENT_PRECISION_HIGH
+            precision highp float;
+        #else
+            precision mediump float;
+        #endif
         attribute vec3 position;
         attribute vec2 uv;
         uniform mat4 worldViewProjection;
@@ -69,7 +73,11 @@ if (!isMobileDevice) {
     `;
 
     BABYLON.Effect.ShadersStore["inkFragmentShader"] = `
-        precision highp float;
+        #ifdef GL_FRAGMENT_PRECISION_HIGH
+            precision highp float;
+        #else
+            precision mediump float;
+        #endif
         varying vec2 vUv;
         uniform float time;
         uniform float speed;
@@ -121,7 +129,7 @@ if (!isMobileDevice) {
             gl_FragColor = vec4(color, 1.0);
         }
     `;
-}
+
 
 const createScene = async function () {
     const loadingScreen = document.getElementById('loading-screen');
@@ -172,7 +180,7 @@ const createScene = async function () {
     shadowGenerator.usePercentageCloserFiltering = true;
     shadowGenerator.setDarkness(0.5);
 
-// ============================================================================
+    // ============================================================================
     // TRANSFORMATION HIERARCHY & CAMERA
     // ============================================================================
     scene.collisionsEnabled = true;
@@ -186,7 +194,6 @@ const createScene = async function () {
     if (isMobileDevice) {
         cameraTarget.y = -1.5;   // Spušta metu (dron se pomera više ka vrhu ekrana)
         cameraTarget.z = -1.15;  // Podešavanje dubine
-        // cameraTarget.x = -0.5; // Otkomentariši i prilagodi ako želiš i pomak po X osi
         
         initialRadius = 11.5;    // Veća udaljenost da cela krila drona stanu u kadar
         initialBeta = 1.05;      // Blaga ptičja perspektiva (ugao odozgo)
@@ -202,7 +209,7 @@ const createScene = async function () {
 
     if (isMobileDevice) {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_VERTICAL_FIXED;
-        camera.fov = 0.85; 
+        camera.fov = 0.82; 
     } else {
         camera.fovMode = BABYLON.ArcRotateCamera.FOVMODE_HORIZONTAL_FIXED;
         camera.fov = 1.15;  
@@ -219,7 +226,7 @@ const createScene = async function () {
     camera.wheelPrecision = 60;
     
     camera.lowerRadiusLimit = 3.0;
-    camera.upperRadiusLimit = isMobileDevice ? 12.0 : 6.0; 
+    camera.upperRadiusLimit = isMobileDevice ? 11.5 : 6.0; 
 
     const camLight = new BABYLON.PointLight("camLight", camera.position, scene);
     camLight.parent = camera;
