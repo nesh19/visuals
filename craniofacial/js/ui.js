@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const typeBody = document.getElementById("type-body");
     
     if (typeBody) {
-        typeBody.innerHTML = "CONCEPT: REAL-TIME MAXILLOFACIAL MORPHOLOGICAL SURGERY OUTCOMES.<br>TECH SOLUTIONS: POWERED BY THE BABYLON.JS MORPHTARGETMANAGER OPTIMIZED FOR REAL-TIME, SLIDER-DRIVEN PARAMETRIC VERTEX DEFORMATION.";
+        typeBody.innerHTML = "CONCEPT: REAL-TIME MAXILLOFACIAL MORPHOLOGICAL SURGERY OUTCOMES.<br>TECH SOLUTIONS: MORPHTARGETMANAGER OPTIMIZED FOR REAL-TIME, SLIDER-DRIVEN PARAMETRIC VERTEX DEFORMATION.";
         void typeBody.offsetWidth;
         requestAnimationFrame(() => {
             setTimeout(() => {
