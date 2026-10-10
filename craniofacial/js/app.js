@@ -13,13 +13,14 @@ const wireframeBtn = document.getElementById("wireframe-btn");
 if (wireframeBtn) {
     wireframeBtn.onclick = () => {
         isWireframe = !isWireframe;
-        i
         wireframeBtn.style.color = isWireframe ? "#ffffff" : "#aaa";
         wireframeBtn.style.borderColor = isWireframe ? "#ffffff" : "rgba(255,255,255,0.1)";
-        
-        if (currentScene) {
+        if(currentScene) {
             currentScene.materials.forEach(mat => { 
-                if (mat) mat.wireframe = isWireframe; 
+                if (mat) {
+                    mat.wireframe = isWireframe;
+                    mat.markDirty();
+                }
             });
         }
     };
