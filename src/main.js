@@ -423,3 +423,20 @@ engine.runRenderLoop(() => {
 window.addEventListener("resize", () => {
     engine.resize();
 });
+
+// ============================================================================
+// FIX: RESET INTERACTION STATE ON BACK/FORWARD NAVIGATION (BFCACHE)
+// ============================================================================
+window.addEventListener("pageshow", (event) => {
+    // Provera da li je stranica izvučena iz keša (BFCache) preko Back dugmeta
+    const isBackNavigation = event.persisted || 
+        (window.performance && window.performance.getEntriesByType("navigation")[0]?.type === "back_forward");
+
+    if (isBackNavigation) {
+        console.log("BFCache zamrzavanje detektovano. Pokrećem hardverski reload stranice...");
+        
+        // ŠAH-MAT: Prisilno osvežavamo celu stranicu ispočetka!
+        // Parametar true nalaže brauzeru da zaobiđe keš i povuče čist kod sa servera
+        window.location.reload();
+    }
+});
