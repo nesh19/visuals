@@ -5,6 +5,22 @@
 const canvas = document.getElementById("renderCanvas");
 const engine = new BABYLON.Engine(canvas, true);
 
+if (typeof BABYLON.KhronosTextureContainer2 !== "undefined") {
+
+    const baseUrl = new URL(
+        "assets/",
+        window.location.href
+    ).href;
+
+    BABYLON.KhronosTextureContainer2.URLConfig = {
+        jsDecoderModule: baseUrl + "babylon.ktx2Decoder.js",
+        wasmZSTDDecoder: baseUrl + "zstddec.wasm",
+        jsMSCTranscoder: baseUrl + "msc_basis_transcoder.js",
+        wasmMSCTranscoder: baseUrl + "msc_basis_transcoder.wasm",
+        wasmUASTCLevel0: baseUrl + "uastc_bc7.wasm"
+    };
+}
+
 let currentScene = null;
 let isWireframe = false;
 
